@@ -50,10 +50,6 @@ else
     pip install -e '.[test]'
 fi
 
-#pip install codecov pytest-cov
-pip install pre-commit
-pre-commit install
-
 pip install pep8 codecov mypy flake8 pytest-cov flake8-import-order
 pip install -r requirements.txt
 
