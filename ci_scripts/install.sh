@@ -50,13 +50,11 @@ else
     pip install -e '.[test]'
 fi
 
-python -c "import numpy; print('numpy %s' % numpy.__version__)"
-python -c "import scipy; print('scipy %s' % scipy.__version__)"
-
 #pip install codecov pytest-cov
 pip install pre-commit
 pre-commit install
 
 pip install pep8 codecov mypy flake8 pytest-cov flake8-import-order
+pip install -r requirements.txt
 
 conda list
