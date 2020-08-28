@@ -80,3 +80,5 @@ is either zero (function returned properly) or one of the following exceptions:
 
 Here, the above issue about the grace period becomes interesting. Without it, it is likely that
 a AnythingException is returned where a Cpu-/TimeoutException would be appropriate.
+
+This repository is based on Stefan Falkner's https://github.com/sfalkner/pynisher.
