@@ -1,5 +1,6 @@
-import pynisher
 import time
+
+import pynisher
 
 
 # using it as a decorator for every call to this function

@@ -6,8 +6,9 @@ import os
 import signal
 import logging
 
-import pynisher
 import psutil
+
+import pynisher
 
 try:
     import sklearn # noqa
