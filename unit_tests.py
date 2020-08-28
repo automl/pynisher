@@ -155,7 +155,7 @@ class test_limit_resources_module(unittest.TestCase):
 
         for mem in range(1, 10):
             self.assertIsNone(wrapped_function(mem, 10, 0))
-            self.assertEqual(wrapped_function.exit_status, pynisher.TimeoutException)
+            self.assertEqual(wrapped_function.exit_status, pynisher.TimeoutException, str(wrapped_function.result))
 
     @unittest.skipIf(not all_tests, "skipping too many processes test")
     def test_num_processes(self):
@@ -302,4 +302,5 @@ class test_limit_resources_module(unittest.TestCase):
         self.assertTrue('RuntimeError' in wrapped_function.stderr)
 
 
-unittest.main()
+if __name__ == '__main__':
+    unittest.main()
