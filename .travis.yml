@@ -30,5 +30,4 @@ before_install:
 
 install: source ci_scripts/install.sh
 script: bash ci_scripts/test.sh
-after_success: source ci_scripts/success.sh && source ci_scripts/create_doc.sh $TRAVIS_BRANCH "doc_result"
 
