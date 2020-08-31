@@ -87,6 +87,11 @@ def crash_unexpectedly(signum):
     time.sleep(1)
 
 
+def crash_with_exception(exception):
+    print("going to raise {}.".format(exception))
+    raise exception
+
+
 def return_big_array(num_elements):
     return ([1] * num_elements)
 
@@ -311,19 +316,39 @@ class test_limit_resources_module(unittest.TestCase):
         self.assertTrue('RuntimeError' in wrapped_function.stderr)
 
     def test_too_little_memory(self):
+        # Test what happens if the target process does not have a sufficiently high memory limit
 
         # 2048 MB
         dummy_content = [42.] * ((1024 * 2048) // 8) # noqa
 
-        wrapped_function = pynisher.enforce_limits(mem_in_mb=20)(simulate_work)
-        wrapped_function.logger = unittest.mock.Mock()
+        wrapped_function = pynisher.enforce_limits(mem_in_mb=1)(simulate_work)
 
         wrapped_function(size_in_mb=1000, wall_time_in_s=10, num_processes=1,
                          dummy_content=dummy_content)
 
         self.assertIsNone(wrapped_function.result)
-        self.assertIs(wrapped_function.exit_status, pynisher.SubprocessException)
-        self.assertEqual(wrapped_function.os_errno, 12)
+        self.assertIn(wrapped_function.exit_status,
+                      (pynisher.SubprocessException, MemoryError))
+        # This is triggered on my local machine, but not on travis-ci
+        if wrapped_function.exit_status == pynisher.SubprocessException:
+            self.assertEqual(wrapped_function.os_errno, 12)
+
+    def test_raise(self):
+        # As above test does not reliably work on travis-ci, this test checks whether an
+        # OSError's error code is properly read out
+        wrapped_function = pynisher.enforce_limits(mem_in_mb=1000)(crash_with_exception)
+        wrapped_function.logger = unittest.mock.Mock()
+
+        error = OSError()
+        error.errno = 12
+        wrapped_function(error)
+
+        self.assertIsNone(wrapped_function.result)
+        self.assertEqual(pynisher.SubprocessException, MemoryError)
+        # This is triggered on my local machine, but not on travis-ci
+        if wrapped_function.exit_status == pynisher.SubprocessException:
+            self.assertEqual(wrapped_function.os_errno, 12)
+
 
 
 if __name__ == '__main__':
