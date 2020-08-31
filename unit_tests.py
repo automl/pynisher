@@ -315,7 +315,7 @@ class test_limit_resources_module(unittest.TestCase):
         # 2048 MB
         dummy_content = [42.] * ((1024 * 2048) // 8) # noqa
 
-        wrapped_function = pynisher.enforce_limits(mem_in_mb=50)(simulate_work)
+        wrapped_function = pynisher.enforce_limits(mem_in_mb=20)(simulate_work)
         wrapped_function.logger = unittest.mock.Mock()
 
         wrapped_function(size_in_mb=1000, wall_time_in_s=10, num_processes=1,
