@@ -327,6 +327,8 @@ class test_limit_resources_module(unittest.TestCase):
                          dummy_content=dummy_content)
 
         self.assertIsNone(wrapped_function.result)
+        # The following is a bit weird, on my local machine I get a SubprocessException, but on
+        # travis-ci I get a MemoryLimitException
         self.assertIn(wrapped_function.exit_status,
                       (pynisher.SubprocessException, pynisher.MemorylimitException))
         # This is triggered on my local machine, but not on travis-ci
@@ -345,7 +347,6 @@ class test_limit_resources_module(unittest.TestCase):
 
         self.assertIsNone(wrapped_function.result)
         self.assertEqual(wrapped_function.exit_status, pynisher.SubprocessException)
-        # This is triggered on my local machine, but not on travis-ci
         if wrapped_function.exit_status == pynisher.SubprocessException:
             self.assertEqual(wrapped_function.os_errno, 12)
 
