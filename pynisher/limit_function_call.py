@@ -31,15 +31,6 @@ class SubprocessException(Exception):
     pass
 
 
-class AnythingException(Exception):
-    """Pynisher exception object returned if the function call closed
-    prematurely and no cause can be determined.
-
-    In this case, the stdout and stderr can contain helpful debug information.
-    """
-    pass
-
-
 class PynisherError(Exception):
     """Pynisher exception object returned in case of an internal error.
 
@@ -52,6 +43,16 @@ class SignalException(Exception):
     """Pynisher exception object returned in case of a signal being handled by
     the pynisher"""
     pass
+
+
+class AnythingException(Exception):
+    """Pynisher exception object returned if the function call closed
+    prematurely and no cause can be determined.
+
+    In this case, the stdout and stderr can contain helpful debug information.
+    """
+    pass
+
 
 
 # create the function the subprocess can execute
