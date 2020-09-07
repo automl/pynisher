@@ -54,7 +54,6 @@ class AnythingException(Exception):
     pass
 
 
-
 # create the function the subprocess can execute
 def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_time_limit_in_s, num_procs,
                     grace_period_in_s, tmp_dir, *args, **kwargs):
