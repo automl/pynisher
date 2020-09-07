@@ -11,22 +11,46 @@ import psutil
 
 
 class CpuTimeoutException(Exception):
+    """Pynisher exception object returned on a CPU time limit."""
     pass
 
 
 class TimeoutException(Exception):
+    """Pynisher exception object returned when hitting the time limit."""
     pass
 
 
 class MemorylimitException(Exception):
+    """Pynisher exception object returned when hitting the memory limit."""
     pass
 
 
 class SubprocessException(Exception):
+    """Pynisher exception object returned when receiving an OSError while
+    executing the subprocess."""
+    pass
+
+
+class PynisherError(Exception):
+    """Pynisher exception object returned in case of an internal error.
+
+    This should not happen, please open an issue at github.com/automl/pynisher
+    if you run into this."""
+    pass
+
+
+class SignalException(Exception):
+    """Pynisher exception object returned in case of a signal being handled by
+    the pynisher"""
     pass
 
 
 class AnythingException(Exception):
+    """Pynisher exception object returned if the function call closed
+    prematurely and no cause can be determined.
+
+    In this case, the stdout and stderr can contain helpful debug information.
+    """
     pass
 
 
@@ -44,7 +68,9 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
             # SIGALRM is sent to process when the specified time limit to an alarm function elapses (when real or clock time elapses)
             logger.debug("timeout")
             raise (TimeoutException)
-        raise AnythingException
+        else:
+            logger.debug("other: %d", signum)
+            raise SignalException
 
     # temporary directory to store stdout and stderr
     if tmp_dir is not None:
@@ -110,10 +136,7 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
         return_value = (None, MemorylimitException)
 
     except OSError as e:
-        if (e.errno == 11):
-            return_value = (None, SubprocessException)
-        else:
-            return_value = (None, AnythingException)
+        return_value = (None, SubprocessException, e.errno)
 
     except CpuTimeoutException:
         return_value = (None, CpuTimeoutException)
@@ -121,8 +144,8 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
     except TimeoutException:
         return_value = (None, TimeoutException)
 
-    except AnythingException:
-        return_value = (None, AnythingException)
+    except SignalException:
+        return_value = (None, SignalException)
 
     finally:
         try:
@@ -215,16 +238,25 @@ class enforce_limits(object):
                 child_conn.close()
 
                 try:
+                    def read_connection():
+                        connection_output = parent_conn.recv()
+                        if len(connection_output) == 2:
+                            self2.result, self2.exit_status = connection_output
+                        elif len(connection_output) == 3:
+                            self2.result, self2.exit_status, self2.os_errno = connection_output
+                        else:
+                            self2.result, self2.exit_status = (None, PynisherError)
+
                     # read the return value
                     if (self.wall_time_in_s is not None):
                         if parent_conn.poll(self.wall_time_in_s + self.grace_period_in_s):
-                            self2.result, self2.exit_status = parent_conn.recv()
+                            read_connection()
                         else:
                             subproc.terminate()
                             self2.exit_status = TimeoutException
 
                     else:
-                        self2.result, self2.exit_status = parent_conn.recv()
+                        read_connection()
 
                 except EOFError:  # Don't see that in the unit tests :(
                     self.logger.debug(
