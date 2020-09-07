@@ -11,30 +11,46 @@ import psutil
 
 
 class CpuTimeoutException(Exception):
+    """Pynisher exception object returned on a CPU time limit."""
     pass
 
 
 class TimeoutException(Exception):
+    """Pynisher exception object returned when hitting the time limit."""
     pass
 
 
 class MemorylimitException(Exception):
+    """Pynisher exception object returned when hitting the memory limit."""
     pass
 
 
 class SubprocessException(Exception):
+    """Pynisher exception object returned when receiving an OSError while
+    executing the subprocess."""
     pass
 
 
 class AnythingException(Exception):
+    """Pynisher exception object returned if the function call closed
+    prematurely and no cause can be determined.
+
+    In this case, the stdout and stderr can contain helpful debug information.
+    """
     pass
 
 
 class PynisherError(Exception):
+    """Pynisher exception object returned in case of an internal error.
+
+    This should not happen, please open an issue at github.com/automl/pynisher
+    if you run into this."""
     pass
 
 
 class SignalException(Exception):
+    """Pynisher exception object returned in case of a signal being handled by
+    the pynisher"""
     pass
 
 
@@ -222,21 +238,7 @@ class enforce_limits(object):
                 child_conn.close()
 
                 try:
-                    # read the return value
-                    if (self.wall_time_in_s is not None):
-                        if parent_conn.poll(self.wall_time_in_s + self.grace_period_in_s):
-                            connection_output = parent_conn.recv()
-                            if len(connection_output) == 2:
-                                self2.result, self2.exit_status = connection_output
-                            elif len(connection_output) == 3:
-                                self2.result, self2.exit_status, self2.os_errno = connection_output
-                            else:
-                                self2.result, self2.exit_status = (None, PynisherError)
-                        else:
-                            subproc.terminate()
-                            self2.exit_status = TimeoutException
-
-                    else:
+                    def read_connection():
                         connection_output = parent_conn.recv()
                         if len(connection_output) == 2:
                             self2.result, self2.exit_status = connection_output
@@ -244,6 +246,17 @@ class enforce_limits(object):
                             self2.result, self2.exit_status, self2.os_errno = connection_output
                         else:
                             self2.result, self2.exit_status = (None, PynisherError)
+
+                    # read the return value
+                    if (self.wall_time_in_s is not None):
+                        if parent_conn.poll(self.wall_time_in_s + self.grace_period_in_s):
+                            read_connection()
+                        else:
+                            subproc.terminate()
+                            self2.exit_status = TimeoutException
+
+                    else:
+                        read_connection()
 
                 except EOFError:  # Don't see that in the unit tests :(
                     self.logger.debug(

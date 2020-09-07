@@ -240,11 +240,11 @@ class test_limit_resources_module(unittest.TestCase):
 
         time_limit = 2
         grace_period = 1
-        mock = unittest.mock.Mock()
+        logger_mock = unittest.mock.Mock()
 
         wrapped_function = pynisher.enforce_limits(cpu_time_in_s=time_limit, mem_in_mb=None,
                                                    grace_period_in_s=grace_period, logger=logger)
-        wrapped_function.logger = mock
+        wrapped_function.logger = logger_mock
         wrapped_function = wrapped_function(svc_example)
         start = time.time()
         wrapped_function(16384, 10000)
@@ -253,10 +253,10 @@ class test_limit_resources_module(unittest.TestCase):
         time.sleep(1)
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), 0)
-        self.assertEqual(mock.debug.call_count, 2)
-        self.assertEqual(mock.debug.call_args_list[0][0][0],
+        self.assertEqual(logger_mock.debug.call_count, 2)
+        self.assertEqual(logger_mock.debug.call_args_list[0][0][0],
                          'Function called with argument: (16384, 10000), {}')
-        self.assertEqual(mock.debug.call_args_list[1][0][0],
+        self.assertEqual(logger_mock.debug.call_args_list[1][0][0],
                          'Your function call closed the pipe prematurely -> '
                          'Subprocess probably got an uncatchable signal.')
         # self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
