@@ -266,12 +266,10 @@ class enforce_limits(object):
                 except: # noqa
                     self.logger.debug("Something else went wrong, sorry.")
                 finally:
-                    subproc.join()  # Wait for the process to finish - necessary to get the exitcode
                     self2.resources_function = resource.getrusage(resource.RUSAGE_CHILDREN)
                     self2.resources_pynisher = resource.getrusage(resource.RUSAGE_SELF)
                     self2.wall_clock_time = time.time() - start
                     self2.exit_status = 5 if self2.exit_status is None else self2.exit_status
-                    self2.exitcode = subproc.exitcode
 
                     # recover stdout and stderr if requested
                     if self.capture_output:
@@ -284,6 +282,8 @@ class enforce_limits(object):
 
                     # don't leave zombies behind
                     subproc.join()
+                    # exitcode is only available after join
+                    self2.exitcode = subproc.exitcode
                 return (self2.result)
 
         return (function_wrapper(func))
