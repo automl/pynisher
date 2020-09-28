@@ -130,6 +130,7 @@ class test_limit_resources_module(unittest.TestCase):
         for mem in [1, 2, 4, 8, 16]:
             self.assertEqual((mem, 0, 0), wrapped_function(mem, 0, 0))
             self.assertEqual(wrapped_function.exit_status, 0)
+            self.assertEqual(wrapped_function.exitcode, 0)
 
     @unittest.skipIf(not all_tests, "skipping out_of_memory test")
     def test_out_of_memory(self):
@@ -146,6 +147,7 @@ class test_limit_resources_module(unittest.TestCase):
         for mem in [1024, 2048, 4096]:
             self.assertIsNone(wrapped_function(mem, 0, 0))
             self.assertEqual(wrapped_function.exit_status, pynisher.MemorylimitException)
+            self.assertEqual(wrapped_function.exitcode, 0)
 
     @unittest.skipIf(not all_tests, "skipping time_out test")
     def test_time_out(self):
@@ -162,6 +164,8 @@ class test_limit_resources_module(unittest.TestCase):
         for mem in range(1, 10):
             self.assertIsNone(wrapped_function(mem, 10, 0))
             self.assertEqual(wrapped_function.exit_status, pynisher.TimeoutException, str(wrapped_function.result))
+            # Apparently, the exit code here is not deterministic (so far only PYthon 3.6)
+            self.assertIn(wrapped_function.exitcode, (-15, 0))
 
     @unittest.skipIf(not all_tests, "skipping too many processes test")
     def test_num_processes(self):
@@ -178,6 +182,7 @@ class test_limit_resources_module(unittest.TestCase):
         for processes in [2, 15, 50, 100, 250]:
             self.assertIsNone(wrapped_function(0, 0, processes))
             self.assertEqual(wrapped_function.exit_status, pynisher.SubprocessException)
+            self.assertEqual(wrapped_function.exitcode, 0)
 
     @unittest.skipIf(not all_tests, "skipping unexpected signal test")
     def test_crash_unexpectedly(self):
@@ -185,6 +190,7 @@ class test_limit_resources_module(unittest.TestCase):
         wrapped_function = pynisher.enforce_limits()(crash_unexpectedly)
         self.assertIsNone(wrapped_function(signal.SIGQUIT))
         self.assertEqual(wrapped_function.exit_status, pynisher.SignalException)
+        self.assertEqual(wrapped_function.exitcode, 0)
 
     @unittest.skipIf(not all_tests, "skipping unexpected signal test")
     def test_high_cpu_percentage(self):
@@ -196,6 +202,7 @@ class test_limit_resources_module(unittest.TestCase):
 
         self.assertIsNone(wrapped_function())
         self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
+        self.assertEqual(wrapped_function.exitcode, 0)
 
     @unittest.skipIf(not all_tests, "skipping big data test")
     def test_big_return_data(self):
@@ -205,6 +212,7 @@ class test_limit_resources_module(unittest.TestCase):
         for num_elements in [4, 16, 64, 256, 1024, 4096, 16384, 65536, 262144]:
             bla = wrapped_function(num_elements)
             self.assertEqual(len(bla), num_elements)
+            self.assertEqual(wrapped_function.exitcode, 0)
 
     @unittest.skipIf(not all_tests, "skipping subprocess changing process group")
     def test_kill_subprocesses(self):
@@ -214,6 +222,7 @@ class test_limit_resources_module(unittest.TestCase):
         time.sleep(1)
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertEqual(wrapped_function.exitcode, -15)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
     @unittest.skipIf(not all_tests, "skipping fitting an SVM to see how C libraries are handles")
@@ -230,6 +239,8 @@ class test_limit_resources_module(unittest.TestCase):
         time.sleep(1)
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertTrue(duration <= 2.1)
+        self.assertEqual(wrapped_function.exitcode, -15)
         self.assertLess(duration, 2.1)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
@@ -262,6 +273,7 @@ class test_limit_resources_module(unittest.TestCase):
         # self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
         self.assertGreater(duration, time_limit - 0.1)
         self.assertLess(duration, time_limit + grace_period + 0.1)
+        self.assertEqual(wrapped_function.exitcode, -9)
 
     @unittest.skipIf(not all_tests, "skipping nested pynisher test")
     def test_nesting(self):
@@ -299,8 +311,9 @@ class test_limit_resources_module(unittest.TestCase):
 
         wrapped_function(5)
 
-        self.assertIn('0', wrapped_function.stdout)
+        self.assertTrue('0' in wrapped_function.stdout)
         self.assertEqual(wrapped_function.stderr, '')
+        self.assertEqual(wrapped_function.exitcode, 0)
 
         def print_and_fail():
             print(0)
@@ -314,6 +327,7 @@ class test_limit_resources_module(unittest.TestCase):
 
         self.assertIn('0', wrapped_function.stdout)
         self.assertIn('RuntimeError', wrapped_function.stderr)
+        self.assertEqual(wrapped_function.exitcode, 1)
 
     def test_too_little_memory(self):
         # Test what happens if the target process does not have a sufficiently high memory limit
@@ -327,9 +341,14 @@ class test_limit_resources_module(unittest.TestCase):
                          dummy_content=dummy_content)
 
         self.assertIsNone(wrapped_function.result)
-        # Executing this test from the command line gives a MemoryLimitException, executing
-        # it from within pycharm gives a Subproceserror
-        self.assertEqual(wrapped_function.exit_status, pynisher.MemorylimitException)
+        # The following is a bit weird, on my local machine I get a SubprocessException, but on
+        # travis-ci I get a MemoryLimitException
+        self.assertIn(wrapped_function.exit_status,
+                      (pynisher.SubprocessException, pynisher.MemorylimitException))
+        # This is triggered on my local machine, but not on travis-ci
+        if wrapped_function.exit_status == pynisher.SubprocessException:
+            self.assertEqual(wrapped_function.os_errno, 12)
+        self.assertEqual(wrapped_function.exitcode, 0)
 
     def test_raise(self):
         # As above test does not reliably work on travis-ci, this test checks whether an
@@ -343,7 +362,9 @@ class test_limit_resources_module(unittest.TestCase):
 
         self.assertIsNone(wrapped_function.result)
         self.assertEqual(wrapped_function.exit_status, pynisher.SubprocessException)
-        self.assertEqual(wrapped_function.os_errno, 12)
+        if wrapped_function.exit_status == pynisher.SubprocessException:
+            self.assertEqual(wrapped_function.os_errno, 12)
+        self.assertEqual(wrapped_function.exitcode, 0)
 
 
 if __name__ == '__main__':

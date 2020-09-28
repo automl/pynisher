@@ -282,6 +282,8 @@ class enforce_limits(object):
 
                     # don't leave zombies behind
                     subproc.join()
+                    # exitcode is only available after join
+                    self2.exitcode = subproc.exitcode
                 return (self2.result)
 
         return (function_wrapper(func))

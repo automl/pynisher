@@ -64,7 +64,10 @@ slight variation of the above example:
     for t in range(5):
         obj = pynisher.enforce_limits(wall_time_in_s=2, capture_output=True)(my_function)
         result = obj(t)
-        print(result, obj.result, obj.exit_status, obj.wall_clock_time, obj.stdout, obj.stderr)
+        print(
+            result, obj.result, obj.exit_status, obj.wall_clock_time,
+            obj.stdout, obj.stderr, obj.exitcode,
+        )
 
 
 The object ```obj``` can be used as the original function. After calling it, it contains
@@ -82,6 +85,8 @@ is either zero (function returned properly) or one of the following exceptions:
     pynisher.AnythingException	    # Something else went wrong, e.g., your function received a signal and just died.
 
 Here, the above issue about the grace period becomes interesting. Without it, it is likely that
-a AnythingException is returned where a Cpu-/TimeoutException would be appropriate.
+a AnythingException is returned where a Cpu-/TimeoutException would be appropriate. The ``exitcode``
+is the exitcode returned by the subprocess, see `multiprocessing.Process.exitcode <https://docs
+.python.org/3/library/multiprocessing.html#multiprocessing.Process.exitcode>`_
 
 This repository is based on Stefan Falkner's https://github.com/sfalkner/pynisher.
