@@ -315,7 +315,6 @@ class test_limit_resources_module(unittest.TestCase):
         self.assertEqual(wrapped_function.stderr, '')
         self.assertEqual(wrapped_function.exitcode, 0)
 
-
         def print_and_fail():
             print(0)
             raise RuntimeError()
@@ -329,7 +328,6 @@ class test_limit_resources_module(unittest.TestCase):
         self.assertIn('0', wrapped_function.stdout)
         self.assertIn('RuntimeError', wrapped_function.stderr)
         self.assertEqual(wrapped_function.exitcode, 1)
-
 
     def test_too_little_memory(self):
         # Test what happens if the target process does not have a sufficiently high memory limit
@@ -352,7 +350,6 @@ class test_limit_resources_module(unittest.TestCase):
             self.assertEqual(wrapped_function.os_errno, 12)
         self.assertEqual(wrapped_function.exitcode, 0)
 
-
     def test_raise(self):
         # As above test does not reliably work on travis-ci, this test checks whether an
         # OSError's error code is properly read out
@@ -368,8 +365,6 @@ class test_limit_resources_module(unittest.TestCase):
         if wrapped_function.exit_status == pynisher.SubprocessException:
             self.assertEqual(wrapped_function.os_errno, 12)
         self.assertEqual(wrapped_function.exitcode, 0)
-
-
 
 if __name__ == '__main__':
     unittest.main()
