@@ -366,5 +366,6 @@ class test_limit_resources_module(unittest.TestCase):
             self.assertEqual(wrapped_function.os_errno, 12)
         self.assertEqual(wrapped_function.exitcode, 0)
 
+
 if __name__ == '__main__':
     unittest.main()
