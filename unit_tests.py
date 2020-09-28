@@ -200,7 +200,7 @@ class test_limit_resources_module(unittest.TestCase):
         wrapped_function = pynisher.enforce_limits(cpu_time_in_s=cpu_time_in_s, grace_period_in_s=grace_period)(
             cpu_usage)
 
-        self.assertEqual(None, wrapped_function())
+        self.assertIsNone(wrapped_function())
         self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
         self.assertEqual(wrapped_function.exitcode, 0)
 
@@ -239,8 +239,9 @@ class test_limit_resources_module(unittest.TestCase):
         time.sleep(1)
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), 0)
-        self.assertTrue(duration < 2.1)
+        self.assertTrue(duration <= 2.1)
         self.assertEqual(wrapped_function.exitcode, -15)
+        self.assertLess(duration, 2.1)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
     @unittest.skipIf(not all_tests, "skipping fitting an SVM to see how C libraries are handles")
@@ -288,8 +289,8 @@ class test_limit_resources_module(unittest.TestCase):
         time.sleep(1)
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), 0)
-        self.assertTrue(duration > tl - 0.1)
-        self.assertTrue(duration < tl + gp + 0.1)
+        self.assertGreater(duration, tl - 0.1)
+        self.assertLess(duration, tl + gp + 0.1)
 
     @unittest.skipIf(not all_tests, "skipping capture stdout test")
     def test_capture_output(self):
@@ -311,8 +312,9 @@ class test_limit_resources_module(unittest.TestCase):
         wrapped_function(5)
 
         self.assertTrue('0' in wrapped_function.stdout)
-        self.assertTrue(wrapped_function.stderr == '')
+        self.assertEqual(wrapped_function.stderr, '')
         self.assertEqual(wrapped_function.exitcode, 0)
+
 
         def print_and_fail():
             print(0)
@@ -324,9 +326,10 @@ class test_limit_resources_module(unittest.TestCase):
 
         wrapped_function()
 
-        self.assertTrue('0' in wrapped_function.stdout)
-        self.assertTrue('RuntimeError' in wrapped_function.stderr)
+        self.assertIn('0', wrapped_function.stdout)
+        self.assertIn('RuntimeError', wrapped_function.stderr)
         self.assertEqual(wrapped_function.exitcode, 1)
+
 
     def test_too_little_memory(self):
         # Test what happens if the target process does not have a sufficiently high memory limit
@@ -349,6 +352,7 @@ class test_limit_resources_module(unittest.TestCase):
             self.assertEqual(wrapped_function.os_errno, 12)
         self.assertEqual(wrapped_function.exitcode, 0)
 
+
     def test_raise(self):
         # As above test does not reliably work on travis-ci, this test checks whether an
         # OSError's error code is properly read out
@@ -364,6 +368,7 @@ class test_limit_resources_module(unittest.TestCase):
         if wrapped_function.exit_status == pynisher.SubprocessException:
             self.assertEqual(wrapped_function.os_errno, 12)
         self.assertEqual(wrapped_function.exitcode, 0)
+
 
 
 if __name__ == '__main__':
