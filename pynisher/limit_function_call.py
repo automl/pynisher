@@ -166,13 +166,19 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
 
 class enforce_limits(object):
     def __init__(self, mem_in_mb=None, cpu_time_in_s=None, wall_time_in_s=None, num_processes=None,
-                 grace_period_in_s=None, logger=None, capture_output=False):
+                 grace_period_in_s=None, logger=None, capture_output=False, context=None):
+
+        if context is None:
+            self.context = multiprocessing.get_context()
+        else:
+            self.context = multiprocessing
+
         self.mem_in_mb = mem_in_mb
         self.cpu_time_in_s = cpu_time_in_s
         self.num_processes = num_processes
         self.wall_time_in_s = wall_time_in_s
         self.grace_period_in_s = 0 if grace_period_in_s is None else grace_period_in_s
-        self.logger = logger if logger is not None else multiprocessing.get_logger()
+        self.logger = logger if logger is not None else self.context.get_logger()
         self.capture_output = capture_output
 
         if self.mem_in_mb is not None:
@@ -207,7 +213,7 @@ class enforce_limits(object):
                 self2._reset_attributes()
 
                 # create a pipe to retrieve the return value
-                parent_conn, child_conn = multiprocessing.Pipe(False)
+                parent_conn, child_conn = self.context.Pipe(False)
                 # import pdb; pdb.set_trace()
 
                 if self.capture_output:
@@ -218,17 +224,22 @@ class enforce_limits(object):
                     tmp_dir_name = None
 
                 # create and start the process
-                subproc = multiprocessing.Process(target=subprocess_func, name="pynisher function call", args=(
-                    self2.func,
-                    child_conn,
-                    self.logger,
-                    self.mem_in_mb,
-                    self.cpu_time_in_s,
-                    self.wall_time_in_s,
-                    self.num_processes,
-                    self.grace_period_in_s,
-                    tmp_dir_name) + args,
-                    kwargs=kwargs)
+                subproc = self.context.Process(
+                    target=subprocess_func,
+                    name="pynisher function call",
+                    args=(
+                        self2.func,
+                        child_conn,
+                        self.logger,
+                        self.mem_in_mb,
+                        self.cpu_time_in_s,
+                        self.wall_time_in_s,
+                        self.num_processes,
+                        self.grace_period_in_s,
+                        tmp_dir_name
+                    ) + args,
+                    kwargs=kwargs,
+                )
                 self.logger.debug("Function called with argument: {}, {}".format(args, kwargs))
 
                 # start the process
