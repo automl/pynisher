@@ -1,3 +1,7 @@
+=====
+Usage
+=====
+
 The pynisher is a little module intended to limit a functions resources.
 It starts a new process, sets the desired limits, and executes the
 function inside it. In the end, it returns the function return value.
@@ -32,7 +36,7 @@ The full list of argments to enforce_limits reads:
         mem_in_mb=None, cpu_time_in_s=None,
         wall_time_in_s=None, num_processes=None,
         grace_period_in_s=None, logger=None,
-        capture_output=False)
+        capture_output=False, context=None)
 
 The first four are actual constraints on the memory, the CPU time, the wall time, and the
 number of subprocesses of the function. All values should be integers or None, which means
@@ -88,5 +92,30 @@ Here, the above issue about the grace period becomes interesting. Without it, it
 a AnythingException is returned where a Cpu-/TimeoutException would be appropriate. The ``exitcode``
 is the exitcode returned by the subprocess, see `multiprocessing.Process.exitcode <https://docs
 .python.org/3/library/multiprocessing.html#multiprocessing.Process.exitcode>`_
+
+Finally, see `Pynisher and Multithreading`_ for the use of the ``context`` argument.
+
+=====
+Other
+=====
+
+Pynisher and Multithreading
+===========================
+
+When the Pynisher is used together with the Python Threading library, it is possible to run into
+a deadlock when using the standard ``fork`` method to start new processes as described in
+
+* https://github.com/Delgan/loguru/issues/231
+* https://gist.github.com/mfm24/e62ec5d50c672524107ca00a391e6104
+* https://github.com/dask/dask/issues/3759
+
+One way of solving this would be to change the forking behavior as described
+`here <https://github.com/google/python-atfork/blob/main/atfork/stdlib_fixer.py>`_, but this is
+also makes very strong assumptions on how the code is executed. An alternative is passing a
+`Context <https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods>`_
+which uses either ``spawn`` or ``forkserver`` as the process startup method.
+
+Project origin
+==============
 
 This repository is based on Stefan Falkner's https://github.com/sfalkner/pynisher.
