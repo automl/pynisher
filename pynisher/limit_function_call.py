@@ -171,7 +171,7 @@ class enforce_limits(object):
         if context is None:
             self.context = multiprocessing.get_context()
         else:
-            self.context = multiprocessing
+            self.context = context
 
         self.mem_in_mb = mem_in_mb
         self.cpu_time_in_s = cpu_time_in_s

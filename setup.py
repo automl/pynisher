@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='pynisher',
-    version="0.6.2",
+    version="0.6.3",
     packages=['pynisher'],
     install_requires=['docutils>=0.3', 'setuptools', 'psutil'],
     author="Stefan Falkner, Christina Hernandez-Wunsch, Samuel Mueller and Matthias Feurer",
