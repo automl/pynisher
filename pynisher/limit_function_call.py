@@ -55,7 +55,7 @@ class AnythingException(Exception):
     pass
 
 
-class fake_open(contextlib.AbstractContextManager, contextlib.AbstractAsyncContextManager):
+class fake_open(contextlib.AbstractContextManager):
     """Context manager that does no additional processing and accepts all kinds of input.
 
     Return `None` upon enter.
@@ -68,12 +68,6 @@ class fake_open(contextlib.AbstractContextManager, contextlib.AbstractAsyncConte
         return None
 
     def __exit__(self, *excinfo):
-        pass
-
-    async def __aenter__(self):
-        return None
-
-    async def __aexit__(self, *excinfo):
         pass
 
 
