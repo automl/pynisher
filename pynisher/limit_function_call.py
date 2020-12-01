@@ -1,4 +1,5 @@
 #! /bin/python
+import contextlib
 import resource
 import signal
 import multiprocessing
@@ -54,6 +55,28 @@ class AnythingException(Exception):
     pass
 
 
+class fake_open(contextlib.AbstractContextManager, contextlib.AbstractAsyncContextManager):
+    """Context manager that does no additional processing and accepts all kinds of input.
+
+    Return `None` upon enter.
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self):
+        return None
+
+    def __exit__(self, *excinfo):
+        pass
+
+    async def __aenter__(self):
+        return None
+
+    async def __aexit__(self, *excinfo):
+        pass
+
+
 # create the function the subprocess can execute
 def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_time_limit_in_s, num_procs,
                     grace_period_in_s, tmp_dir, *args, **kwargs):
@@ -72,96 +95,104 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
             logger.debug("other: %d", signum)
             raise SignalException
 
-    # temporary directory to store stdout and stderr
     if tmp_dir is not None:
         logger.debug(
             'Redirecting output of the function to files. Access them via the stdout and stderr attributes of the wrapped function.')
+    stdout_context = open if tmp_dir else fake_open
+    stdout_file = None if tmp_dir is None else os.path.join(tmp_dir, 'std.out')
+    stderr_context = open if tmp_dir else fake_open
+    stderr_file = None if tmp_dir is None else os.path.join(tmp_dir, 'std.err')
 
-        stdout = open(os.path.join(tmp_dir, 'std.out'), 'a', buffering=1)
-        sys.stdout = stdout
+    # Open files with a context manager to ensure that they will be closed again afterwards
+    with stdout_context(stdout_file, 'a', buffering=1) as stdout, \
+            stderr_context(stderr_file, 'a', buffering=1) as stderr:
+        if stdout:
+            #stdout = open(os.path.join(tmp_dir, 'std.out'), 'a', buffering=1)
+            sys.stdout = stdout
 
-        stderr = open(os.path.join(tmp_dir, 'std.err'), 'a', buffering=1)
-        sys.stderr = stderr
+        if stderr:
+            #stderr = open(os.path.join(tmp_dir, 'std.err'), 'a', buffering=1)
+            sys.stderr = stderr
 
-    # catching all signals at this point turned out to interfer with the subprocess (e.g. using ROS)
-    signal.signal(signal.SIGALRM, handler)
-    signal.signal(signal.SIGXCPU, handler)
-    signal.signal(signal.SIGQUIT, handler)
+        # catching all signals at this point turned out to interfer with the subprocess (e.g. using ROS)
+        signal.signal(signal.SIGALRM, handler)
+        signal.signal(signal.SIGXCPU, handler)
+        signal.signal(signal.SIGQUIT, handler)
 
-    # code to catch EVERY catchable signal (even X11 related ones ... )
-    # only use for debugging/testing as this seems to be too intrusive.
-    """
-    for i in [x for x in dir(signal) if x.startswith("SIG")]:
+        # code to catch EVERY catchable signal (even X11 related ones ... )
+        # only use for debugging/testing as this seems to be too intrusive.
+        """
+        for i in [x for x in dir(signal) if x.startswith("SIG")]:
+            try:
+                signum = getattr(signal,i)
+                print("register {}, {}".format(signum, i))
+                signal.signal(signum, handler)
+            except:
+                print("Skipping %s"%i)
+        """
+
+        # set the memory limit
+        if mem_in_mb is not None:
+            # byte --> megabyte
+            mem_in_b = mem_in_mb * 1024 * 1024
+            # the maximum area (in bytes) of address space which may be taken by the process.
+            resource.setrlimit(resource.RLIMIT_AS, (mem_in_b, mem_in_b))
+
+        # for now: don't allow the function to spawn subprocesses itself.
+        # resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
+        # Turns out, this is quite restrictive, so we don't use this option by default
+        if num_procs is not None:
+            resource.setrlimit(resource.RLIMIT_NPROC, (num_procs, num_procs))
+
+        # schedule an alarm in specified number of seconds
+        if wall_time_limit_in_s is not None:
+            signal.alarm(wall_time_limit_in_s)
+
+        if cpu_time_limit_in_s is not None:
+            # From the Linux man page:
+            # When the process reaches the soft limit, it is sent a SIGXCPU signal.
+            # The default action for this signal is to terminate the process.
+            # However, the signal can be caught, and the handler can return control
+            # to the main program. If the process continues to consume CPU time,
+            # it will be sent SIGXCPU once per second until the hard limit is reached,
+            # at which time it is sent SIGKILL.
+            resource.setrlimit(resource.RLIMIT_CPU, (cpu_time_limit_in_s, cpu_time_limit_in_s + grace_period_in_s))
+
+        # the actual function call
         try:
-            signum = getattr(signal,i)
-            print("register {}, {}".format(signum, i))
-            signal.signal(signum, handler)
-        except:
-            print("Skipping %s"%i)
-    """
+            logger.debug("call function")
+            return_value = ((func(*args, **kwargs), 0))
+            logger.debug("function returned properly: {}".format(return_value))
+        except MemoryError:
+            return_value = (None, MemorylimitException)
 
-    # set the memory limit
-    if mem_in_mb is not None:
-        # byte --> megabyte
-        mem_in_b = mem_in_mb * 1024 * 1024
-        # the maximum area (in bytes) of address space which may be taken by the process.
-        resource.setrlimit(resource.RLIMIT_AS, (mem_in_b, mem_in_b))
+        except OSError as e:
+            return_value = (None, SubprocessException, e.errno)
 
-    # for now: don't allow the function to spawn subprocesses itself.
-    # resource.setrlimit(resource.RLIMIT_NPROC, (1, 1))
-    # Turns out, this is quite restrictive, so we don't use this option by default
-    if num_procs is not None:
-        resource.setrlimit(resource.RLIMIT_NPROC, (num_procs, num_procs))
+        except CpuTimeoutException:
+            return_value = (None, CpuTimeoutException)
 
-    # schedule an alarm in specified number of seconds
-    if wall_time_limit_in_s is not None:
-        signal.alarm(wall_time_limit_in_s)
+        except TimeoutException:
+            return_value = (None, TimeoutException)
 
-    if cpu_time_limit_in_s is not None:
-        # From the Linux man page:
-        # When the process reaches the soft limit, it is sent a SIGXCPU signal.
-        # The default action for this signal is to terminate the process.
-        # However, the signal can be caught, and the handler can return control
-        # to the main program. If the process continues to consume CPU time,
-        # it will be sent SIGXCPU once per second until the hard limit is reached,
-        # at which time it is sent SIGKILL.
-        resource.setrlimit(resource.RLIMIT_CPU, (cpu_time_limit_in_s, cpu_time_limit_in_s + grace_period_in_s))
+        except SignalException:
+            return_value = (None, SignalException)
 
-    # the actual function call
-    try:
-        logger.debug("call function")
-        return_value = ((func(*args, **kwargs), 0))
-        logger.debug("function returned properly: {}".format(return_value))
-    except MemoryError:
-        return_value = (None, MemorylimitException)
-
-    except OSError as e:
-        return_value = (None, SubprocessException, e.errno)
-
-    except CpuTimeoutException:
-        return_value = (None, CpuTimeoutException)
-
-    except TimeoutException:
-        return_value = (None, TimeoutException)
-
-    except SignalException:
-        return_value = (None, SignalException)
-
-    finally:
-        try:
-            logger.debug("return value: {}".format(return_value))
-
-            pipe.send(return_value)
-            pipe.close()
-
-        except: # noqa
-            # this part should only fail if the parent process is alread dead, so there is not much to do anymore :)
-            pass
         finally:
-            # recursively kill all children
-            p = psutil.Process()
-            for child in p.children(recursive=True):
-                child.kill()
+            try:
+                logger.debug("return value: {}".format(return_value))
+
+                pipe.send(return_value)
+                pipe.close()
+
+            except: # noqa
+                # this part should only fail if the parent process is alread dead, so there is not much to do anymore :)
+                pass
+            finally:
+                # recursively kill all children
+                p = psutil.Process()
+                for child in p.children(recursive=True):
+                    child.kill()
 
 
 class enforce_limits(object):
@@ -219,7 +250,11 @@ class enforce_limits(object):
                 if self.capture_output:
                     tmp_dir = tempfile.TemporaryDirectory()
                     tmp_dir_name = tmp_dir.name
-
+                    # create the files to capture output
+                    with open(os.path.join(tmp_dir_name, 'std.out'), 'a', buffering=1):
+                        pass
+                    with open(os.path.join(tmp_dir_name, 'std.err'), 'a', buffering=1):
+                        pass
                 else:
                     tmp_dir_name = None
 
