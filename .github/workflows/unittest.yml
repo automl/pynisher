@@ -12,7 +12,7 @@ jobs:
         use-conda: [true, false]
         context: ['fork', 'spawn', 'forkserver']
         use-dist: [false]
-        scikit-learn: [0.22.2, 0.23.1]
+        scikit-learn: [0.23.1]
         include:
           - python-version: 3.8
             code-cov: true
@@ -77,7 +77,7 @@ jobs:
         # This processes cannot be killed unless killing the parent
         # The forked isolates each check to it's own process
         export CONTEXT=${{ matrix.context }}
-        $CONDA/envs/testenv/bin/python3 -m pytest --forked --durations=20 -v $codecov unit_tests.py
+        $CONDA/envs/testenv/bin/python3 -m pytest --forked --durations=20 -v $codecov test
     - name: Run tests
       if: matrix.use-conda == false
       run: |
@@ -86,7 +86,7 @@ jobs:
         # This processes cannot be killed unless killing the parent
         # The forked isolates each check to it's own process
         export CONTEXT=${{ matrix.context }}
-        pytest --forked --durations=20 -v $codecov unit_tests.py
+        pytest --forked --durations=20 -v $codecov test
     - name: Check for files left behind by test
       if: ${{ always() }}
       run: |
