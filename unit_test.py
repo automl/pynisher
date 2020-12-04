@@ -20,6 +20,11 @@ except ImportError:
     is_sklearn_available = False
 
 context = os.environ.get('CONTEXT', 'fork')
+expected_children = {
+    'fork': 0,
+    'spawn': 1,
+    'forkserver': 2,
+}
 print(f"Using context = {context}")
 all_tests = 1
 logger = multiprocessing.log_to_stderr()
@@ -113,6 +118,22 @@ def nested_pynisher(level=2, cputime=5, walltime=5, memlimit=10e24, increment=-1
                                        context=multiprocessing.get_context(context),
                                        grace_period_in_s=grace_period)(nested_pynisher)
         func(level - 1, None, walltime + increment, memlimit, increment)
+
+
+def print_and_sleep(t):
+    for i in range(t):
+        print(i)
+        time.sleep(1)
+
+
+def print_and_fail():
+    print(0)
+    raise RuntimeError()
+
+
+def crash_while_read_file():
+    with open('some_non_existing_files_to_cause_crash'):
+        pass
 
 
 class test_limit_resources_module(unittest.TestCase):
@@ -237,7 +258,7 @@ class test_limit_resources_module(unittest.TestCase):
 
         time.sleep(1)
         p = psutil.Process()
-        self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertEqual(len(p.children(recursive=True)), expected_children[context])
         self.assertEqual(wrapped_function.exitcode, -15)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
@@ -256,7 +277,7 @@ class test_limit_resources_module(unittest.TestCase):
 
         time.sleep(1)
         p = psutil.Process()
-        self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertEqual(len(p.children(recursive=True)), expected_children[context])
         self.assertTrue(duration <= 2.1)
         self.assertEqual(wrapped_function.exitcode, -15)
         self.assertLess(duration, 2.1)
@@ -282,7 +303,7 @@ class test_limit_resources_module(unittest.TestCase):
 
         time.sleep(1)
         p = psutil.Process()
-        self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertEqual(len(p.children(recursive=True)), expected_children[context])
         self.assertEqual(logger_mock.debug.call_count, 2)
         self.assertEqual(logger_mock.debug.call_args_list[0][0][0],
                          'Function called with argument: (16384, 10000), {}')
@@ -295,6 +316,7 @@ class test_limit_resources_module(unittest.TestCase):
         self.assertEqual(wrapped_function.exitcode, -9)
 
     @unittest.skipIf(not all_tests, "skipping nested pynisher test")
+    #@unittest.skipIf(context != 'fork', "Nesting")
     def test_nesting(self):
 
         tl = 2  # time limit
@@ -307,7 +329,7 @@ class test_limit_resources_module(unittest.TestCase):
 
         time.sleep(1)
         p = psutil.Process()
-        self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertEqual(len(p.children(recursive=True)), expected_children[context])
         self.assertGreater(duration, tl - 0.1)
         self.assertLess(duration, tl + gp + 0.1)
 
@@ -319,11 +341,6 @@ class test_limit_resources_module(unittest.TestCase):
         time_limit = 2
         grace_period = 1
 
-        def print_and_sleep(t):
-            for i in range(t):
-                print(i)
-                time.sleep(1)
-
         wrapped_function = pynisher.enforce_limits(wall_time_in_s=time_limit, mem_in_mb=None,
                                                    context=multiprocessing.get_context(context),
                                                    grace_period_in_s=grace_period, logger=logger, capture_output=True)(
@@ -334,10 +351,6 @@ class test_limit_resources_module(unittest.TestCase):
         self.assertTrue('0' in wrapped_function.stdout)
         self.assertEqual(wrapped_function.stderr, '')
         self.assertEqual(wrapped_function.exitcode, 0)
-
-        def print_and_fail():
-            print(0)
-            raise RuntimeError()
 
         wrapped_function = pynisher.enforce_limits(wall_time_in_s=time_limit, mem_in_mb=None,
                                                    context=multiprocessing.get_context(context),
@@ -378,17 +391,19 @@ class test_limit_resources_module(unittest.TestCase):
         # OSError's error code is properly read out
         wrapped_function = pynisher.enforce_limits(
             context=multiprocessing.get_context(context),
-            mem_in_mb=1000)(crash_with_exception)
+            mem_in_mb=1000)(crash_while_read_file)
         wrapped_function.logger = unittest.mock.Mock()
 
-        error = OSError()
-        error.errno = 12
-        wrapped_function(error)
+        # Emulate OS error via file access, as OSError object is reconstructed
+        # depending on the context (so we get a None instead of a set code)
+        # With file error access we get a consistent 2:
+        # 2 - Misuse of shell builtins (according to Bash documentation)
+        wrapped_function()
 
         self.assertIsNone(wrapped_function.result)
         self.assertEqual(wrapped_function.exit_status, pynisher.SubprocessException)
         if wrapped_function.exit_status == pynisher.SubprocessException:
-            self.assertEqual(wrapped_function.os_errno, 12)
+            self.assertEqual(wrapped_function.os_errno, 2)
         self.assertEqual(wrapped_function.exitcode, 0)
 
 
