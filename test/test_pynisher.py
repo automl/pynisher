@@ -323,7 +323,9 @@ class TestLimitResources:
             assert len(p.children(recursive=True)) == 2
         else:
             assert len(p.children(recursive=True)) == 0
-        assert duration <= 2.1
+        # In github actions, I have seen up to 2.2 due to delay
+        # relaxing time a bit from 2.1->2.3
+        assert duration <= 2.3
         assert wrapped_function.exitcode == -15
 
     def test_liblinear_svc(self, context, logger_mock):
@@ -431,7 +433,7 @@ class TestLimitResources:
         dummy_content = [42.] * ((1024 * 2048) // 8) # noqa
 
         wrapped_function = pynisher.enforce_limits(
-            mem_in_mb=1,
+            mem_in_mb=10,
             context=multiprocessing.get_context(context),
         )(simulate_work)
 
