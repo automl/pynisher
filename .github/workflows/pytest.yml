@@ -63,18 +63,15 @@ jobs:
         # Forked is imperative as spawn creates <defunct> children
         # This processes cannot be killed unless killing the parent
         # The forked isolates each check to it's own process
-        $CONDA/envs/testenv/bin/python3 -m pytest --forked --durations=20 --timeout=300 --timeout-method=thread -v $codecov test
+        $CONDA/envs/testenv/bin/python3 -m pytest --forked --durations=20 -v $codecov test
     - name: Run tests
       if: matrix.use-conda == false
       run: |
-        export OPENBLAS_NUM_THREADS=1
-        export OMP_NUM_THREADS=1
-        export MKL_NUM_THREADS=1
         if [ ${{ matrix.code-cov }} ]; then codecov='--cov=pynisher --cov-report=xml'; fi
         # Forked is imperative as spawn creates <defunct> children
         # This processes cannot be killed unless killing the parent
         # The forked isolates each check to it's own process
-        pytest --forked --durations=20 --timeout=300 --timeout-method=thread -v $codecov test
+        pytest --forked --durations=20 -v $codecov test
     - name: Check for files left behind by test
       if: ${{ always() }}
       run: |

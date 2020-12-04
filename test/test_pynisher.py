@@ -173,7 +173,8 @@ class TestLimitResources:
             context=multiprocessing.get_context(context),
         )(simulate_work)
 
-        assert wrapped_function(memory, 0, 0) is None
+        assert wrapped_function(memory, 0, 0) is None, "{}/{}".format(wrapped_function.result,
+                                                                   wrapped_function.exit_status)
         assert wrapped_function.exit_status == pynisher.MemorylimitException
         assert wrapped_function.exitcode == 0
 

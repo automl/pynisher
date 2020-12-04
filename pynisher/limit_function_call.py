@@ -152,6 +152,7 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
             logger.debug("return value: {}".format(return_value))
 
             pipe.send(return_value)
+            time.sleep(1)
             pipe.close()
 
         except: # noqa
