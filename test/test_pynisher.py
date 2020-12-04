@@ -174,7 +174,7 @@ class TestLimitResources:
         )(simulate_work)
 
         assert wrapped_function(memory, 0, 0) is None, "{}/{}".format(wrapped_function.result,
-                                                                   wrapped_function.exit_status)
+                                                                      wrapped_function.exit_status)
         assert wrapped_function.exit_status == pynisher.MemorylimitException
         assert wrapped_function.exitcode == 0
 
@@ -425,29 +425,6 @@ class TestLimitResources:
         assert 'RuntimeError' in wrapped_function.stderr
         assert wrapped_function.exitcode == 1
 
-    def test_too_little_memory(self, context):
-        # Test what happens if the target process does not have a
-        # sufficiently high memory limit
-
-        # 2048 MB
-        dummy_content = [42.] * ((1024 * 2048) // 8) # noqa
-
-        wrapped_function = pynisher.enforce_limits(
-            mem_in_mb=10,
-            context=multiprocessing.get_context(context),
-        )(simulate_work)
-
-        wrapped_function(size_in_mb=1000, wall_time_in_s=10, num_processes=1,
-                         dummy_content=dummy_content)
-
-        assert wrapped_function.result is None
-        # The following is a bit weird, on my local machine I get a SubprocessException,
-        # but on travis-ci I get a MemoryLimitException
-        assert wrapped_function.exit_status in (pynisher.SubprocessException,
-                                                pynisher.MemorylimitException)
-        # This is triggered on my local machine, but not on travis-ci
-        if wrapped_function.exit_status == pynisher.SubprocessException:
-            assert wrapped_function.os_errno == 12
         assert wrapped_function.exitcode == 0
 
     def test_raise(self, context):
@@ -470,3 +447,34 @@ class TestLimitResources:
         if wrapped_function.exit_status == pynisher.SubprocessException:
             assert wrapped_function.os_errno == 2
         assert wrapped_function.exitcode == 0
+
+
+# @pytest.mark.parametrize("context", ['fork', 'spawn', 'forkserver'])
+class TestIsolatedLimitResources:
+    """
+    To test out little memory, exclude other fixture/data from the below test
+    """
+    # def test_too_little_memory(self, context):
+    def test_too_little_memory(self):
+        # Test what happens if the target process does not have a
+        # sufficiently high memory limit
+
+        # 2048 MB
+        dummy_content = [42.] * ((1024 * 2048) // 8) # noqa
+
+        wrapped_function = pynisher.enforce_limits(
+            mem_in_mb=1,
+            # context=multiprocessing.get_context(context),
+        )(simulate_work)
+
+        wrapped_function(size_in_mb=1000, wall_time_in_s=10, num_processes=1,
+                         dummy_content=dummy_content)
+
+        assert wrapped_function.result is None
+        # The following is a bit weird, on my local machine I get a SubprocessException,
+        # but on travis-ci I get a MemoryLimitException
+        assert wrapped_function.exit_status in (pynisher.SubprocessException,
+                                                pynisher.MemorylimitException)
+        # This is triggered on my local machine, but not on travis-ci
+        if wrapped_function.exit_status == pynisher.SubprocessException:
+            assert wrapped_function.os_errno == 12
