@@ -12,7 +12,7 @@ jobs:
         use-conda: [true, false]
         context: ['fork', 'spawn', 'forkserver']
         use-dist: [false]
-        scikit-learn: [0.23.1]
+        scikit-learn: [0.22.2, 0.23.1]
         include:
           - python-version: 3.8
             code-cov: true

@@ -19,18 +19,35 @@ except ImportError:
     print("Scikit Learn was not found!")
     is_sklearn_available = False
 
+# Get the context from the environment, or default to fork
+# This can be used as a fixture when pytest environment is
+# an stable option
 context = os.environ.get('CONTEXT', 'fork')
+
+# Also, the expected recursive children each process should have
+# is dependant of the context as follows:
 expected_children = {
+    # we expect no recursive process on a fork
     'fork': 0,
+    # According to the documentation:
+    # the parent process starts a fresh python interpreter process.
+    # This is treated as a new recursive psutil child
     'spawn': 1,
+    # According to the documentation:
+    # When the program starts and selects the forkserver start method,
+    # a server process is started. From then on, whenever a new process is needed,
+    # the parent process connects to the server and requests that it fork a new process.
+    # We expect 2 child processes, 1 server dispatching workers and the actual worker
     'forkserver': 2,
 }
-print(f"Using context = {context}")
 all_tests = 1
 logger = multiprocessing.log_to_stderr()
 logger.setLevel(logging.WARNING)
 
 
+# The functions below are left as globals (at the top of the file)
+# as a requirement for the multiple forking processes (a function is pickled
+# in the fork server, and the workers/main process function pickle state must match)
 # TODO: add tests with large return value to test for deadlock!
 
 def rogue_subprocess():
