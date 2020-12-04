@@ -284,6 +284,7 @@ class test_limit_resources_module(unittest.TestCase):
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
     @unittest.skipIf(not all_tests, "skipping fitting an SVM to see how C libraries are handles")
+    @unittest.skipIf(context != 'fork', "I don't think this function works even in fork. It produces a EOFError. But in spawn/forkserver it last less than expected time.")
     def test_liblinear_svc(self):
 
         global logger
