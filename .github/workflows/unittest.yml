@@ -1,4 +1,3 @@
-name: UnitTests
 name: Tests
 
 on: [push, pull_request]
