@@ -1,5 +1,4 @@
 #! /bin/python
-import pytest
 import time
 import multiprocessing
 import unittest
@@ -20,6 +19,8 @@ except ImportError:
     print("Scikit Learn was not found!")
     is_sklearn_available = False
 
+context = os.environ.get('CONTEXT', 'fork')
+print(f"Using context = {context}")
 all_tests = 1
 logger = multiprocessing.log_to_stderr()
 logger.setLevel(logging.WARNING)
@@ -109,14 +110,15 @@ def nested_pynisher(level=2, cputime=5, walltime=5, memlimit=10e24, increment=-1
         spawn_rogue_subprocess(10)
     else:
         func = pynisher.enforce_limits(mem_in_mb=memlimit, cpu_time_in_s=cputime, wall_time_in_s=walltime,
+                                       context=multiprocessing.get_context(context),
                                        grace_period_in_s=grace_period)(nested_pynisher)
         func(level - 1, None, walltime + increment, memlimit, increment)
 
 
-@pytest.mark.parametrize("context", ['fork', 'spawn', 'forkserver'])
-class TestLimitResources:
-    @pytest.mark.parametrize("memory", [1, 2, 4, 8, 16])
-    def test_success(self, context, memory):
+class test_limit_resources_module(unittest.TestCase):
+
+    @unittest.skipIf(not all_tests, "skipping successful tests")
+    def test_success(self):
 
         print("Testing unbounded function call which have to run through!")
         local_mem_in_mb = None
@@ -125,32 +127,36 @@ class TestLimitResources:
         local_grace_period = None
 
         wrapped_function = pynisher.enforce_limits(mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
+                                                   context=multiprocessing.get_context(context),
                                                    cpu_time_in_s=local_cpu_time_in_s,
                                                    grace_period_in_s=local_grace_period)(simulate_work)
 
-        assert (memory, 0, 0) == wrapped_function(memory, 0, 0)
-        assert wrapped_function.exit_status == 0
-        assert wrapped_function.exitcode == 0
+        for mem in [1, 2, 4, 8, 16]:
+            self.assertEqual((mem, 0, 0), wrapped_function(mem, 0, 0))
+            self.assertEqual(wrapped_function.exit_status, 0)
+            self.assertEqual(wrapped_function.exitcode, 0)
 
-    @pytest.mark.parametrize("memory", [1024, 2048, 4096])
-    def test_out_of_memory(self, context, memory):
+    @unittest.skipIf(not all_tests, "skipping out_of_memory test")
+    def test_out_of_memory(self):
         print("Testing memory constraint.")
         local_mem_in_mb = 32
         local_wall_time_in_s = None
         local_cpu_time_in_s = None
         local_grace_period = None
 
-        wrapped_function = pynisher.enforce_limits(mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
-                                                   cpu_time_in_s=local_cpu_time_in_s,
-                                                   grace_period_in_s=local_grace_period)(simulate_work)
+        wrapped_function = pynisher.enforce_limits(
+            mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
+            context=multiprocessing.get_context(context),
+            cpu_time_in_s=local_cpu_time_in_s,
+            grace_period_in_s=local_grace_period)(simulate_work)
 
-        assert wrapped_function(memory, 0, 0) is None, "{}/{}".format(wrapped_function.result,
-                                                                      wrapped_function.exit_status)
-        assert wrapped_function.exit_status == pynisher.MemorylimitException
-        assert wrapped_function.exitcode == 0
+        for mem in [1024, 2048, 4096]:
+            self.assertIsNone(wrapped_function(mem, 0, 0))
+            self.assertEqual(wrapped_function.exit_status, pynisher.MemorylimitException)
+            self.assertEqual(wrapped_function.exitcode, 0)
 
-    @pytest.mark.parametrize("memory", [1, 10])
-    def test_time_out(self, context, memory):
+    @unittest.skipIf(not all_tests, "skipping time_out test")
+    def test_time_out(self):
         print("Testing wall clock time constraint.")
         local_mem_in_mb = None
         local_wall_time_in_s = 1
@@ -158,17 +164,18 @@ class TestLimitResources:
         local_grace_period = None
 
         wrapped_function = pynisher.enforce_limits(mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
+                                                   context=multiprocessing.get_context(context),
                                                    cpu_time_in_s=local_cpu_time_in_s,
                                                    grace_period_in_s=local_grace_period)(simulate_work)
 
-        assert wrapped_function(memory, 10, 0) is None
-        assert wrapped_function.exit_status == pynisher.TimeoutException, str(
-            wrapped_function.result)
-        # Apparently, the exit code here is not deterministic (so far only PYthon 3.6)
-        assert wrapped_function.exitcode in (-15, 0)
+        for mem in range(1, 10):
+            self.assertIsNone(wrapped_function(mem, 10, 0))
+            self.assertEqual(wrapped_function.exit_status, pynisher.TimeoutException, str(wrapped_function.result))
+            # Apparently, the exit code here is not deterministic (so far only PYthon 3.6)
+            self.assertIn(wrapped_function.exitcode, (-15, 0))
 
-    @pytest.mark.parametrize("processes", [2, 15, 50, 100, 250])
-    def test_num_processes(self, context, processes):
+    @unittest.skipIf(not all_tests, "skipping too many processes test")
+    def test_num_processes(self):
         print("Testing number of processes constraint.")
         local_mem_in_mb = None
         local_num_processes = 1
@@ -176,57 +183,72 @@ class TestLimitResources:
         local_grace_period = None
 
         wrapped_function = pynisher.enforce_limits(mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
+                                                   context=multiprocessing.get_context(context),
                                                    num_processes=local_num_processes,
                                                    grace_period_in_s=local_grace_period)(simulate_work)
 
-        assert wrapped_function(0, 0, processes) is None
-        assert wrapped_function.exit_status == pynisher.SubprocessException
-        assert wrapped_function.exitcode == 0
+        for processes in [2, 15, 50, 100, 250]:
+            self.assertIsNone(wrapped_function(0, 0, processes))
+            self.assertEqual(wrapped_function.exit_status, pynisher.SubprocessException)
+            self.assertEqual(wrapped_function.exitcode, 0)
 
-    def test_crash_unexpectedly(self, context):
+    @unittest.skipIf(not all_tests, "skipping unexpected signal test")
+    def test_crash_unexpectedly(self):
         print("Testing an unexpected signal simulating a crash.")
-        wrapped_function = pynisher.enforce_limits()(crash_unexpectedly)
-        assert wrapped_function(signal.SIGQUIT) is None
-        assert wrapped_function.exit_status == pynisher.SignalException
-        assert wrapped_function.exitcode == 0
-        assert wrapped_function.exit_status == pynisher.SignalException
-        assert wrapped_function.exitcode == 0
+        wrapped_function = pynisher.enforce_limits(
+            context=multiprocessing.get_context(context),
+        )(crash_unexpectedly)
+        self.assertIsNone(wrapped_function(signal.SIGQUIT))
+        self.assertEqual(wrapped_function.exit_status, pynisher.SignalException)
+        self.assertEqual(wrapped_function.exitcode, 0)
 
-    def test_high_cpu_percentage(self, context):
+    @unittest.skipIf(not all_tests, "skipping unexpected signal test")
+    def test_high_cpu_percentage(self):
         print("Testing cpu time constraint.")
         cpu_time_in_s = 2
         grace_period = 1
-        wrapped_function = pynisher.enforce_limits(cpu_time_in_s=cpu_time_in_s, grace_period_in_s=grace_period)(
+        wrapped_function = pynisher.enforce_limits(cpu_time_in_s=cpu_time_in_s,
+                                                   context=multiprocessing.get_context(context),
+                                                   grace_period_in_s=grace_period)(
             cpu_usage)
 
-        assert wrapped_function() is None
-        assert wrapped_function.exit_status == pynisher.CpuTimeoutException
-        assert wrapped_function.exitcode == 0
+        self.assertIsNone(wrapped_function())
+        self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
+        self.assertEqual(wrapped_function.exitcode, 0)
 
-    @pytest.mark.parametrize("num_elements", [4, 16, 64, 256, 1024, 4096, 16384, 65536, 262144])
-    def test_big_return_data(self, context, num_elements):
+    @unittest.skipIf(not all_tests, "skipping big data test")
+    def test_big_return_data(self):
         print("Testing big return values")
-        wrapped_function = pynisher.enforce_limits()(return_big_array)
+        wrapped_function = pynisher.enforce_limits(
+            context=multiprocessing.get_context(context),
+        )(return_big_array)
 
-        bla = wrapped_function(num_elements)
-        assert len(bla) == num_elements
-        assert wrapped_function.exitcode == 0
+        for num_elements in [4, 16, 64, 256, 1024, 4096, 16384, 65536, 262144]:
+            bla = wrapped_function(num_elements)
+            self.assertEqual(len(bla), num_elements)
+            self.assertEqual(wrapped_function.exitcode, 0)
 
-    def test_kill_subprocesses(self, context):
-        wrapped_function = pynisher.enforce_limits(wall_time_in_s=1)(spawn_rogue_subprocess)
+    @unittest.skipIf(not all_tests, "skipping subprocess changing process group")
+    def test_kill_subprocesses(self):
+        wrapped_function = pynisher.enforce_limits(
+            context=multiprocessing.get_context(context),
+            wall_time_in_s=1)(spawn_rogue_subprocess)
         wrapped_function(5)
 
         time.sleep(1)
         p = psutil.Process()
-        assert len(p.children(recursive=True)) == 0
-        assert wrapped_function.exitcode == -15
+        self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertEqual(wrapped_function.exitcode, -15)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
-    def test_busy_in_C_library(self, context):
+    @unittest.skipIf(not all_tests, "skipping fitting an SVM to see how C libraries are handles")
+    def test_busy_in_C_library(self):
 
         global logger
 
-        wrapped_function = pynisher.enforce_limits(wall_time_in_s=2)(svm_example)
+        wrapped_function = pynisher.enforce_limits(
+            context=multiprocessing.get_context(context),
+            wall_time_in_s=2)(svm_example)
 
         start = time.time()
         wrapped_function(16384, 128)
@@ -234,13 +256,14 @@ class TestLimitResources:
 
         time.sleep(1)
         p = psutil.Process()
-        assert len(p.children(recursive=True)) == 0
-        assert duration <= 2.1
-        assert wrapped_function.exitcode == -15
+        self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertTrue(duration <= 2.1)
+        self.assertEqual(wrapped_function.exitcode, -15)
+        self.assertLess(duration, 2.1)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
-    def test_liblinear_svc(self, context):
-        # Fitting an SVM to see how C libraries are handles
+    @unittest.skipIf(not all_tests, "skipping fitting an SVM to see how C libraries are handles")
+    def test_liblinear_svc(self):
 
         global logger
 
@@ -249,6 +272,7 @@ class TestLimitResources:
         logger_mock = unittest.mock.Mock()
 
         wrapped_function = pynisher.enforce_limits(cpu_time_in_s=time_limit, mem_in_mb=None,
+                                                   context=multiprocessing.get_context(context),
                                                    grace_period_in_s=grace_period, logger=logger)
         wrapped_function.logger = logger_mock
         wrapped_function = wrapped_function(svc_example)
@@ -258,16 +282,20 @@ class TestLimitResources:
 
         time.sleep(1)
         p = psutil.Process()
-        assert len(p.children(recursive=True)) == 0
-        assert logger_mock.debug.call_count == 2
-        assert logger_mock.debug.call_args_list[0][0][0] == 'Function called with argument: (16384, 10000), {}'
-        assert logger_mock.debug.call_args_list[1][0][0] == 'Your function call closed the pipe prematurely -> Subprocess probably got an uncatchable signal.'
+        self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertEqual(logger_mock.debug.call_count, 2)
+        self.assertEqual(logger_mock.debug.call_args_list[0][0][0],
+                         'Function called with argument: (16384, 10000), {}')
+        self.assertEqual(logger_mock.debug.call_args_list[1][0][0],
+                         'Your function call closed the pipe prematurely -> '
+                         'Subprocess probably got an uncatchable signal.')
         # self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
-        assert duration > time_limit - 0.1
-        assert duration < time_limit + grace_period + 0.1
-        assert wrapped_function.exitcode == -9
+        self.assertGreater(duration, time_limit - 0.1)
+        self.assertLess(duration, time_limit + grace_period + 0.1)
+        self.assertEqual(wrapped_function.exitcode, -9)
 
-    def test_nesting(self, context):
+    @unittest.skipIf(not all_tests, "skipping nested pynisher test")
+    def test_nesting(self):
 
         tl = 2  # time limit
         gp = 1  # grace period
@@ -279,11 +307,12 @@ class TestLimitResources:
 
         time.sleep(1)
         p = psutil.Process()
-        assert len(p.children(recursive=True)) == 0
-        assert duration > tl - 0.1
-        assert duration < tl + gp + 0.1
+        self.assertEqual(len(p.children(recursive=True)), 0)
+        self.assertGreater(duration, tl - 0.1)
+        self.assertLess(duration, tl + gp + 0.1)
 
-    def test_capture_output(self, context):
+    @unittest.skipIf(not all_tests, "skipping capture stdout test")
+    def test_capture_output(self):
         print("Testing capturing of output.")
         global logger
 
@@ -296,61 +325,72 @@ class TestLimitResources:
                 time.sleep(1)
 
         wrapped_function = pynisher.enforce_limits(wall_time_in_s=time_limit, mem_in_mb=None,
+                                                   context=multiprocessing.get_context(context),
                                                    grace_period_in_s=grace_period, logger=logger, capture_output=True)(
             print_and_sleep)
 
         wrapped_function(5)
 
-        assert '0' in wrapped_function.stdout
-        assert wrapped_function.stderr == ''
-        assert wrapped_function.exitcode == 0
+        self.assertTrue('0' in wrapped_function.stdout)
+        self.assertEqual(wrapped_function.stderr, '')
+        self.assertEqual(wrapped_function.exitcode, 0)
 
         def print_and_fail():
             print(0)
             raise RuntimeError()
 
         wrapped_function = pynisher.enforce_limits(wall_time_in_s=time_limit, mem_in_mb=None,
+                                                   context=multiprocessing.get_context(context),
                                                    grace_period_in_s=grace_period, logger=logger, capture_output=True)(
             print_and_fail)
 
         wrapped_function()
 
-        assert '0' in wrapped_function.stdout
-        assert 'RuntimeError' in wrapped_function.stderr
-        assert wrapped_function.exitcode == 1
+        self.assertIn('0', wrapped_function.stdout)
+        self.assertIn('RuntimeError', wrapped_function.stderr)
+        self.assertEqual(wrapped_function.exitcode, 1)
 
-    def test_too_little_memory(self, context):
+    def test_too_little_memory(self):
         # Test what happens if the target process does not have a sufficiently high memory limit
 
         # 2048 MB
         dummy_content = [42.] * ((1024 * 2048) // 8) # noqa
 
-        wrapped_function = pynisher.enforce_limits(mem_in_mb=1)(simulate_work)
+        wrapped_function = pynisher.enforce_limits(mem_in_mb=1,
+                                                   context=multiprocessing.get_context(context),
+                                                   )(simulate_work)
 
         wrapped_function(size_in_mb=1000, wall_time_in_s=10, num_processes=1,
                          dummy_content=dummy_content)
 
-        assert wrapped_function.result is None
+        self.assertIsNone(wrapped_function.result)
         # The following is a bit weird, on my local machine I get a SubprocessException, but on
         # travis-ci I get a MemoryLimitException
-        assert wrapped_function.exit_status in (pynisher.SubprocessException, pynisher.MemorylimitException)
+        self.assertIn(wrapped_function.exit_status,
+                      (pynisher.SubprocessException, pynisher.MemorylimitException))
         # This is triggered on my local machine, but not on travis-ci
         if wrapped_function.exit_status == pynisher.SubprocessException:
-            assert wrapped_function.os_errno == 12
-        assert wrapped_function.exitcode == 0
+            self.assertEqual(wrapped_function.os_errno, 12)
+        self.assertEqual(wrapped_function.exitcode, 0)
 
-    def test_raise(self, context):
+    def test_raise(self):
         # As above test does not reliably work on travis-ci, this test checks whether an
         # OSError's error code is properly read out
-        wrapped_function = pynisher.enforce_limits(mem_in_mb=1000)(crash_with_exception)
+        wrapped_function = pynisher.enforce_limits(
+            context=multiprocessing.get_context(context),
+            mem_in_mb=1000)(crash_with_exception)
         wrapped_function.logger = unittest.mock.Mock()
 
         error = OSError()
         error.errno = 12
         wrapped_function(error)
 
-        assert wrapped_function.result is None
-        assert wrapped_function.exit_status, pynisher.SubprocessException
+        self.assertIsNone(wrapped_function.result)
+        self.assertEqual(wrapped_function.exit_status, pynisher.SubprocessException)
         if wrapped_function.exit_status == pynisher.SubprocessException:
-            assert wrapped_function.os_errno == 12
-        assert wrapped_function.exitcode == 0
+            self.assertEqual(wrapped_function.os_errno, 12)
+        self.assertEqual(wrapped_function.exitcode, 0)
+
+
+if __name__ == '__main__':
+    unittest.main()
