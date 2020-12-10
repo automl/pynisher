@@ -316,12 +316,8 @@ class test_limit_resources_module(unittest.TestCase):
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), expected_children[context])
         self.assertTrue(duration <= 2.1)
-        if context == 'forkserver':
-            # The exit status of the job is 255
-            # in the case of forserver
-            self.assertEqual(wrapped_function.exitcode, 255)
-        else:
-            self.assertEqual(wrapped_function.exitcode, -15)
+        # In the case of 3.6 python and forkserver we get a 255 exception
+        self.assertIn(wrapped_function.exitcode, (-15, 255))
         self.assertLess(duration, 2.1)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
@@ -330,11 +326,12 @@ class test_limit_resources_module(unittest.TestCase):
 
         time_limit = 2
         grace_period = 1
+        this_logger = PickableMock()
 
         wrapped_function = pynisher.enforce_limits(cpu_time_in_s=time_limit, mem_in_mb=None,
                                                    context=multiprocessing.get_context(context),
                                                    grace_period_in_s=grace_period,
-                                                   logger=self.logger)
+                                                   logger=this_logger)
         wrapped_function = wrapped_function(svc_example)
         start = time.time()
         wrapped_function(16384, 10000)
@@ -344,14 +341,14 @@ class test_limit_resources_module(unittest.TestCase):
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), expected_children[context])
         # Using a picklable-logger to capture all messages
-        self.assertEqual(self.logger.debug.call_count, 4)
-        self.assertEqual(self.logger.debug.call_args_list[0][0][0],
+        self.assertEqual(this_logger.debug.call_count, 4)
+        self.assertEqual(this_logger.debug.call_args_list[0][0][0],
                          'Restricting your function to 2 seconds cpu time.')
-        self.assertEqual(self.logger.debug.call_args_list[1][0][0],
+        self.assertEqual(this_logger.debug.call_args_list[1][0][0],
                          'Allowing a grace period of 1 seconds.')
-        self.assertEqual(self.logger.debug.call_args_list[2][0][0],
+        self.assertEqual(this_logger.debug.call_args_list[2][0][0],
                          'Function called with argument: (16384, 10000), {}')
-        self.assertEqual(self.logger.debug.call_args_list[3][0][0],
+        self.assertEqual(this_logger.debug.call_args_list[3][0][0],
                          'Your function call closed the pipe prematurely -> '
                          'Subprocess probably got an uncatchable signal.')
         # self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
