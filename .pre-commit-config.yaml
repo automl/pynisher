@@ -1,0 +1,7 @@
+repos:
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.8.3
+    hooks:
+      - id: flake8
+        name: flake8
+        files: .
