@@ -220,9 +220,12 @@ class test_limit_resources_module(unittest.TestCase):
         for mem in range(1, 10):
             self.assertIsNone(wrapped_function(mem, 10, 0))
             self.assertEqual(wrapped_function.exit_status, pynisher.TimeoutException, str(wrapped_function.result))
-            # Apparently, the exit code here is not deterministic (so far only PYthon 3.6)
-            # In the case of python 3.6 forkserver we get a 255
-            self.assertIn(wrapped_function.exitcode, (-15, 0, 255))
+            if sys.version_info < (3, 7):
+                # Apparently, the exit code here is not deterministic (so far only PYthon 3.6)
+                # In the case of python 3.6 forkserver/spwan we get a 255/-15
+                self.assertIn(wrapped_function.exitcode, (-15, 255))
+            else:
+                self.assertIn(wrapped_function.exitcode, (-15, 0))
 
     @unittest.skipIf(not all_tests, "skipping too many processes test")
     def test_num_processes(self):
@@ -296,8 +299,11 @@ class test_limit_resources_module(unittest.TestCase):
         time.sleep(1)
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), expected_children[context])
-        # In python 3.6 forkwerver we also get 255
-        self.assertIn(wrapped_function.exitcode, (-15, 255))
+        if sys.version_info < (3, 7) and context == 'forkserver':
+            # In python 3.6 forkwerver we also get 255. In other context we get -15
+            self.assertIn(wrapped_function.exitcode, (-15, 255))
+        else:
+            self.assertEqual(wrapped_function.exitcode, -15)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
     @unittest.skipIf(not all_tests, "skipping fitting an SVM to see how C libraries are handles")
@@ -316,8 +322,11 @@ class test_limit_resources_module(unittest.TestCase):
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), expected_children[context])
         self.assertTrue(duration <= 2.1)
-        # In the case of 3.6 python and forkserver we get a 255 exception
-        self.assertIn(wrapped_function.exitcode, (-15, 255))
+        if sys.version_info < (3, 7) and context == 'forkserver':
+            # In python 3.6 forkwerver we also get 255. In other context we get -15
+            self.assertIn(wrapped_function.exitcode, (-15, 255))
+        else:
+            self.assertEqual(wrapped_function.exitcode, -15)
         self.assertLess(duration, 2.1)
 
     @unittest.skipIf(not is_sklearn_available, "test requires scikit learn")
@@ -352,16 +361,20 @@ class test_limit_resources_module(unittest.TestCase):
                          'Your function call closed the pipe prematurely -> '
                          'Subprocess probably got an uncatchable signal.')
         # self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
-        if context == 'fork':
-            self.assertGreater(duration, time_limit - 0.1)
-            self.assertLess(duration, time_limit + grace_period + 0.1)
-            self.assertEqual(wrapped_function.exitcode, -9)
+        self.assertGreater(duration, time_limit - 0.1)
+        self.assertLess(duration, time_limit + grace_period + 0.1)
+        self.assertEqual(wrapped_function.exitcode, -9)
 
     @unittest.skipIf(not all_tests, "skipping nested pynisher test")
     def test_nesting(self):
 
-        tl = 3  # time limit
-        gp = 2  # grace period
+        tl = 2  # time limit
+        gp = 1  # grace period
+        if context in ['forkserver', 'spawn']:
+            # The grace period appears to depend on the context, and as spawn and forkserver
+            # have a higher overhead, a lower grace period can result test-unrelated failures.
+            tl += 1
+            gp += 1
 
         start = time.time()
         nested_pynisher(level=2, cputime=2, walltime=2, memlimit=None, increment=1, grace_period=gp, logger=self.logger)
@@ -371,9 +384,8 @@ class test_limit_resources_module(unittest.TestCase):
         time.sleep(1)
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), expected_children[context])
-        if context == 'fork':
-            self.assertGreater(duration, tl - 0.1)
-            self.assertLess(duration, tl + gp + 0.1)
+        self.assertGreater(duration, tl - 0.1)
+        self.assertLess(duration, tl + gp + 0.1)
 
     @unittest.skipIf(not all_tests, "skipping capture stdout test")
     def test_capture_output(self):
