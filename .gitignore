@@ -2,3 +2,42 @@ __pycache__
 .idea
 *egg-info
 dist
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+__pycache__
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.noseids
+nosetests.xml
+htmlcov
+.coverage
+.tox
+htmlcov/
+cover
+coverage
+htmlcov
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+prof/
