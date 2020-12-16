@@ -364,17 +364,23 @@ class test_limit_resources_module(unittest.TestCase):
                          'Your function call closed the pipe prematurely -> '
                          'Subprocess probably got an uncatchable signal.')
         # self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
+
+        # The tolerance in this context is how much overhead time we accepted in pynisher
+        # Depending in the context, we might require up to 0.5 seconds tolerance as seen
+        # in github actions
+        tolerance = 0.1 if context == 'fork' else 0.5
+
         if sys.version_info < (3, 7):
-            # In python 3.6, in github actions we see times around
-            # 3.447387933731079 -- Increasing the buffer in this case
+            # In python 3.6, in github actions we see higher times around 0.2 more than expected
             # This happens in all 3 context
             # Also 255 exit code is seen in forksever/spawn in 3.6 exclusively
-            self.assertGreater(duration, time_limit - 0.6)
-            self.assertLess(duration, time_limit + grace_period + 0.6)
+            tolerance += 0.2
+            self.assertGreater(duration, time_limit - tolerance)
+            self.assertLess(duration, time_limit + grace_period + tolerance)
             self.assertIn(wrapped_function.exitcode, (-9, 255))
         else:
-            self.assertGreater(duration, time_limit - 0.1)
-            self.assertLess(duration, time_limit + grace_period + 0.1)
+            self.assertGreater(duration, time_limit - tolerance)
+            self.assertLess(duration, time_limit + grace_period + tolerance)
             self.assertEqual(wrapped_function.exitcode, -9)
 
     @unittest.skipIf(not all_tests, "skipping nested pynisher test")
