@@ -201,7 +201,10 @@ class test_limit_resources_module(unittest.TestCase):
         for mem in [1024, 2048, 4096]:
             self.assertIsNone(wrapped_function(mem, 0, 0))
             self.assertEqual(wrapped_function.exit_status, pynisher.MemorylimitException)
-            self.assertEqual(wrapped_function.exitcode, 0)
+            # In github actions, randomly on python 3.6 and 3.9, the exit
+            # status is 1 that happens while running ppid_map during a MemoryError
+            # This happens randomly -- sometimes in conda others in the env python version
+            self.assertIn(wrapped_function.exitcode, (1, 0))
 
     @unittest.skipIf(not all_tests, "skipping time_out test")
     def test_time_out(self):
@@ -363,11 +366,11 @@ class test_limit_resources_module(unittest.TestCase):
         # self.assertEqual(wrapped_function.exit_status, pynisher.CpuTimeoutException)
         if sys.version_info < (3, 7):
             # In python 3.6, in github actions we see times around
-            # 3.369796371459961 -- Increasing the buffer in this case
+            # 3.447387933731079 -- Increasing the buffer in this case
             # This happens in all 3 context
             # Also 255 exit code is seen in forksever/spawn in 3.6 exclusively
-            self.assertGreater(duration, time_limit - 0.4)
-            self.assertLess(duration, time_limit + grace_period + 0.4)
+            self.assertGreater(duration, time_limit - 0.6)
+            self.assertLess(duration, time_limit + grace_period + 0.6)
             self.assertIn(wrapped_function.exitcode, (-9, 255))
         else:
             self.assertGreater(duration, time_limit - 0.1)
