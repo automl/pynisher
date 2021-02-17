@@ -479,6 +479,37 @@ class test_limit_resources_module(unittest.TestCase):
             self.assertEqual(wrapped_function.os_errno, 2)
         self.assertEqual(wrapped_function.exitcode, 0)
 
+    def test_capture_output_error(self):
+        grace_period = 1
+
+        # We want to mimic an scenario where the context.Pipe
+        # fails early, so that a stdout file was not created.
+        context = unittest.mock.Mock()
+        logger_mock = unittest.mock.Mock()
+        context.Pipe.return_value = (unittest.mock.Mock(), unittest.mock.Mock())
+        context.Pipe.return_value[0]._side_effect = ValueError()
+
+        wrapped_function = pynisher.enforce_limits(
+            wall_time_in_s=1,
+            mem_in_mb=None,
+            context=context,
+            grace_period_in_s=grace_period,
+            logger=logger_mock,
+            capture_output=True
+        )(print_and_sleep)
+        return_value = wrapped_function(5)
+
+        # On failure, the log file will catch the error msg
+        self.assertIn('Cannot recover the output from', str(logger_mock.error.call_args))
+
+        # And the stdout/stderr attributes will be left as None
+        self.assertIsNone(wrapped_function.stdout)
+        self.assertIsNone(wrapped_function.stderr)
+
+        # Also check the return value
+        self.assertEqual(wrapped_function.exit_status, 5)
+        self.assertIsNone(return_value)
+
 
 if __name__ == '__main__':
     unittest.main()

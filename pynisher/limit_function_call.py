@@ -284,10 +284,20 @@ class enforce_limits(object):
 
                     # recover stdout and stderr if requested
                     if self.capture_output:
-                        with open(os.path.join(tmp_dir.name, 'std.out'), 'r') as fh:
-                            self2.stdout = fh.read()
-                        with open(os.path.join(tmp_dir.name, 'std.err'), 'r') as fh:
-                            self2.stderr = fh.read()
+                        out_file = os.path.join(tmp_dir.name, 'std.out')
+                        try:
+                            with open(out_file, 'r') as fh:
+                                self2.stdout = fh.read()
+                        except Exception as e:
+                            self.logger.error(
+                                f"Cannot recover the output from {out_file} due to {e}")
+                        err_file = os.path.join(tmp_dir.name, 'std.err')
+                        try:
+                            with open(os.path.join(tmp_dir.name, 'std.err'), 'r') as fh:
+                                self2.stderr = fh.read()
+                        except Exception as e:
+                            self.logger.error(
+                                f"Cannot recover the output from {err_file} due to {e}")
 
                         tmp_dir.cleanup()
 
