@@ -497,7 +497,7 @@ class test_limit_resources_module(unittest.TestCase):
             logger=logger_mock,
             capture_output=True
         )(print_and_sleep)
-        wrapped_function(5)
+        return_value = wrapped_function(5)
 
         # On failure, the log file will catch the error msg
         self.assertIn('Cannot recover the output from', str(logger_mock.error.call_args))
@@ -505,6 +505,10 @@ class test_limit_resources_module(unittest.TestCase):
         # And the stdout/stderr attributes will be left as None
         self.assertIsNone(wrapped_function.stdout)
         self.assertIsNone(wrapped_function.stderr)
+
+        # Also check the return value
+        self.assertEqual(wrapped_function.exit_status, 5)
+        self.assertIsNone(return_value)
 
 
 if __name__ == '__main__':
