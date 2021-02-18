@@ -15,7 +15,7 @@ with open('README.rst') as fh:
 
 setup(
     name='pynisher',
-    version="0.6.3",
+    version="0.6.4",
     packages=['pynisher'],
     install_requires=['docutils>=0.3', 'setuptools', 'psutil'],
     extras_require={
