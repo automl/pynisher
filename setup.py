@@ -1,3 +1,4 @@
+import os
 import sys
 from setuptools import setup
 
@@ -10,6 +11,13 @@ if sys.version_info < (3, 6):
     )
 
 
+
+HERE = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(HERE, 'requirements.txt')) as fp:
+    install_reqs = [r.rstrip() for r in fp.readlines()
+                    if not r.startswith('#') and not r.startswith('git+')]
+
+
 with open('README.rst') as fh:
     long_description = fh.read()
 
@@ -17,7 +25,7 @@ setup(
     name='pynisher',
     version="0.6.4",
     packages=['pynisher'],
-    install_requires=['docutils>=0.3', 'setuptools', 'psutil'],
+    install_requires=install_reqs,
     extras_require={
         "test": [
             "pytest",
