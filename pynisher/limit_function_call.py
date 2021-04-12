@@ -274,6 +274,12 @@ class enforce_limits(object):
                         "Your function call closed the pipe prematurely -> Subprocess probably got an uncatchable signal.")
                     self2.exit_status = AnythingException
 
+                except KeyboardInterrupt:
+                    # To fix the case where the main process is  keyboardInterrupted
+					self.logger.debug("Your function call closed because the process is keyboardinterrupted")
+					subproc.terminate()
+                    # self2.exit_status = AnythingException
+
                 except: # noqa
                     self.logger.debug("Something else went wrong, sorry.")
                 finally:
