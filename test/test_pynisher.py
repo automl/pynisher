@@ -199,7 +199,7 @@ class test_limit_resources_module(unittest.TestCase):
             grace_period_in_s=local_grace_period)(simulate_work)
 
         for mem in [1024, 2048, 4096]:
-            returned_object = (wrapped_function(mem, 0, 0)
+            returned_object = wrapped_function(mem, 0, 0)
             self.assertIsNone(returned_object, f"returned_object={returned_object}/{vars(wrapped_function)}")
             self.assertEqual(wrapped_function.exit_status, pynisher.MemorylimitException)
             # In github actions, randomly on python 3.6 and 3.9, the exit
