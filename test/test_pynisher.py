@@ -10,6 +10,8 @@ import sys
 
 import psutil
 
+import pytest
+
 import pynisher
 
 sys.path.append(os.path.dirname(__file__))
@@ -48,6 +50,11 @@ expected_children = {
 all_tests = 1
 logger = multiprocessing.log_to_stderr()
 logger.setLevel(logging.WARNING)
+
+
+@pytest.fixture
+def logger_mock():
+    return PickableMock() if sys.version_info < (3, 7) else logger
 
 
 # The functions below are left as globals (at the top of the file)
@@ -182,30 +189,6 @@ class test_limit_resources_module(unittest.TestCase):
             self.assertEqual((mem, 0, 0), wrapped_function(mem, 0, 0))
             self.assertEqual(wrapped_function.exit_status, 0)
             self.assertEqual(wrapped_function.exitcode, 0)
-
-    @unittest.skipIf(not all_tests, "skipping out_of_memory test")
-    def test_out_of_memory(self):
-        print("Testing memory constraint.")
-        local_mem_in_mb = 32
-        local_wall_time_in_s = None
-        local_cpu_time_in_s = None
-        local_grace_period = None
-
-        wrapped_function = pynisher.enforce_limits(
-            mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
-            logger=self.logger,
-            context=multiprocessing.get_context(context),
-            cpu_time_in_s=local_cpu_time_in_s,
-            grace_period_in_s=local_grace_period)(simulate_work)
-
-        for mem in [1024, 2048, 4096]:
-            returned_object = wrapped_function(mem, 0, 0)
-            self.assertIsNone(returned_object, f"returned_object={returned_object}/{vars(wrapped_function)}")
-            self.assertEqual(wrapped_function.exit_status, pynisher.MemorylimitException)
-            # In github actions, randomly on python 3.6 and 3.9, the exit
-            # status is 1 that happens while running ppid_map during a MemoryError
-            # This happens randomly -- sometimes in conda others in the env python version
-            self.assertIn(wrapped_function.exitcode, (1, 0))
 
     @unittest.skipIf(not all_tests, "skipping time_out test")
     def test_time_out(self):
@@ -510,6 +493,30 @@ class test_limit_resources_module(unittest.TestCase):
         # Also check the return value
         self.assertEqual(wrapped_function.exit_status, 5)
         self.assertIsNone(return_value)
+
+
+@pytest.mark.parametrize("memory_limit", [1024, 2048, 4096])
+def test_out_of_memory(logger_mock, memory_limit):
+    print("Testing memory constraint.")
+    local_mem_in_mb = 32
+    local_wall_time_in_s = None
+    local_cpu_time_in_s = None
+    local_grace_period = None
+
+    wrapped_function = pynisher.enforce_limits(
+        mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
+        logger=logger_mock,
+        context=multiprocessing.get_context(context),
+        cpu_time_in_s=local_cpu_time_in_s,
+        grace_period_in_s=local_grace_period)(simulate_work)
+
+    returned_object = wrapped_function(memory_limit, 0, 0)
+    assert returned_object is None, f"returned_object={returned_object}/{vars(wrapped_function)}"
+    assert wrapped_function.exit_status == pynisher.MemorylimitException
+    # In github actions, randomly on python 3.6 and 3.9, the exit
+    # status is 1 that happens while running ppid_map during a MemoryError
+    # This happens randomly -- sometimes in conda others in the env python version
+    assert wrapped_function.exitcode in (1, 0)
 
 
 if __name__ == '__main__':
