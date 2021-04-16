@@ -249,7 +249,7 @@ class test_limit_resources_module(unittest.TestCase):
         self.assertIsNone(wrapped_function(signal.SIGQUIT))
         self.assertEqual(wrapped_function.exit_status, pynisher.SignalException)
         self.assertEqual(wrapped_function.exitcode, 0)
-    
+
     @unittest.skipIf(not all_tests, "skipping keyboard interruption test")
     def test_keyboard_interruption(self):
         print("Testing keyboard interruption.")
@@ -257,7 +257,7 @@ class test_limit_resources_module(unittest.TestCase):
             context=multiprocessing.get_context(context),
             logger=self.logger,
         )(keyboard_interruption)
-        return_value = wrapped_function()
+        wrapped_function()
         self.assertEqual(wrapped_function.exit_status, pynisher.KeyboardInterruptException)
         self.assertEqual(wrapped_function.exitcode, -15)
 

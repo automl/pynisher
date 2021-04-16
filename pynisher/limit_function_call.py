@@ -35,6 +35,7 @@ class KeyboardInterruptException(Exception):
     """Pynisher exception object returned when receiving a KeyboardInterrupt."""
     pass
 
+
 class PynisherError(Exception):
     """Pynisher exception object returned in case of an internal error.
 
@@ -275,7 +276,7 @@ class enforce_limits(object):
 
                     else:
                         read_connection()
-                    
+
                     if self2.exit_status is KeyboardInterruptException:
                         self.logger.debug("Your function call closed because the process is keyboardinterrupted.")
                         subproc.terminate()
