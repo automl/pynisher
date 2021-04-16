@@ -124,8 +124,14 @@ def crash_unexpectedly(signum):
 
 
 def crash_with_exception(exception):
-    print("going to raise {}.".format(exception))
+    print("going to raise {}.".format(exception.__name__))
     raise exception
+
+
+def keyboard_interruption():
+    time.sleep(0.5)
+    crash_with_exception(KeyboardInterrupt)
+    time.sleep(0.5)
 
 
 def return_big_array(num_elements):
@@ -243,6 +249,17 @@ class test_limit_resources_module(unittest.TestCase):
         self.assertIsNone(wrapped_function(signal.SIGQUIT))
         self.assertEqual(wrapped_function.exit_status, pynisher.SignalException)
         self.assertEqual(wrapped_function.exitcode, 0)
+    
+    @unittest.skipIf(not all_tests, "skipping keyboard interruption test")
+    def test_keyboard_interruption(self):
+        print("Testing keyboard interruption.")
+        wrapped_function = pynisher.enforce_limits(
+            context=multiprocessing.get_context(context),
+            logger=self.logger,
+        )(keyboard_interruption)
+        return_value = wrapped_function()
+        self.assertEqual(wrapped_function.exit_status, pynisher.KeyboardInterruptException)
+        self.assertEqual(wrapped_function.exitcode, -15)
 
     @unittest.skipIf(not all_tests, "skipping unexpected signal test")
     def test_high_cpu_percentage(self):

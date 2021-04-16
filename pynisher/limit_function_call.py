@@ -31,6 +31,10 @@ class SubprocessException(Exception):
     pass
 
 
+class KeyboardInterruptException(Exception):
+    """Pynisher exception object returned when receiving a KeyboardInterrupt."""
+    pass
+
 class PynisherError(Exception):
     """Pynisher exception object returned in case of an internal error.
 
@@ -137,6 +141,9 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
 
     except OSError as e:
         return_value = (None, SubprocessException, e.errno)
+
+    except KeyboardInterrupt:
+        return_value = (None, KeyboardInterruptException)
 
     except CpuTimeoutException:
         return_value = (None, CpuTimeoutException)
@@ -268,6 +275,10 @@ class enforce_limits(object):
 
                     else:
                         read_connection()
+                    
+                    if self2.exit_status is KeyboardInterruptException:
+                        self.logger.debug("Your function call closed because the process is keyboardinterrupted.")
+                        subproc.terminate()
 
                 except EOFError:  # Don't see that in the unit tests :(
                     self.logger.debug(
@@ -276,9 +287,9 @@ class enforce_limits(object):
 
                 except KeyboardInterrupt:
                     # To fix the case where the main process is  keyboardInterrupted
-                    self.logger.debug("Your function call closed because the process is keyboardinterrupted")
+                    self.logger.debug("Your function call closed because the process is keyboardinterrupted.")
+                    self2.exit_status = KeyboardInterruptException
                     subproc.terminate()
-                    self2.exit_status = AnythingException
 
                 except: # noqa
                     self.logger.debug("Something else went wrong, sorry.")
