@@ -260,7 +260,7 @@ class test_limit_resources_module(unittest.TestCase):
         wrapped_function()
         self.assertEqual(wrapped_function.exit_status, pynisher.KeyboardInterruptException)
         if sys.version_info < (3, 7):
-            self.assertEqual(wrapped_function.exitcode, 255)
+            self.assertIn(wrapped_function.exitcode, (-15, 255))
         else:
             self.assertEqual(wrapped_function.exitcode, -15)
 
