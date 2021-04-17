@@ -259,7 +259,7 @@ class test_limit_resources_module(unittest.TestCase):
         )(keyboard_interruption)
         wrapped_function()
         self.assertEqual(wrapped_function.exit_status, pynisher.KeyboardInterruptException)
-        self.assertEqual(wrapped_function.exitcode, -15)
+        self.assertIn(wrapped_function.exitcode, (-15, 255))
 
     @unittest.skipIf(not all_tests, "skipping unexpected signal test")
     def test_high_cpu_percentage(self):
