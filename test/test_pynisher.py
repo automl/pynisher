@@ -81,7 +81,7 @@ def spawn_rogue_subprocess(num_procs=5):
 def simulate_work(size_in_mb, wall_time_in_s, num_processes, **kwargs):
     # allocate memory (size_in_mb) with an array
     # note the actual size in memory of this process is a little bit larger
-    A = [42.] * ((1024 * size_in_mb) // 8) # noqa
+    A = [42.] * ((1024 * (size_in_mb + 1)) // 8) # noqa
 
     # try to spawn new processes
     if (num_processes > 0):
@@ -259,7 +259,10 @@ class test_limit_resources_module(unittest.TestCase):
         )(keyboard_interruption)
         wrapped_function()
         self.assertEqual(wrapped_function.exit_status, pynisher.KeyboardInterruptException)
-        self.assertIn(wrapped_function.exitcode, (-15, 255))
+        if sys.version_info < (3, 7):
+            self.assertEqual(wrapped_function.exitcode, 255)
+        else:
+            self.assertEqual(wrapped_function.exitcode, -15)
 
     @unittest.skipIf(not all_tests, "skipping unexpected signal test")
     def test_high_cpu_percentage(self):
