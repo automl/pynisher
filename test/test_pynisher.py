@@ -81,7 +81,8 @@ def spawn_rogue_subprocess(num_procs=5):
 def simulate_work(size_in_mb, wall_time_in_s, num_processes, **kwargs):
     # allocate memory (size_in_mb) with an array
     # note the actual size in memory of this process is a little bit larger
-    A = [42.] * ((1024 * (size_in_mb + 1)) // 8) # noqa
+    FLOAT_MAX = 3.402823466E+38
+    A = [FLOAT_MAX] * ((1024 * size_in_mb) // 8) # noqa
 
     # try to spawn new processes
     if (num_processes > 0):
@@ -257,7 +258,8 @@ class test_limit_resources_module(unittest.TestCase):
             context=multiprocessing.get_context(context),
             logger=self.logger,
         )(keyboard_interruption)
-        wrapped_function()
+        return_value = wrapped_function()
+        self.assertIsNone(return_value)
         self.assertEqual(wrapped_function.exit_status, pynisher.KeyboardInterruptException)
         if sys.version_info < (3, 7):
             self.assertIn(wrapped_function.exitcode, (-15, 255))
