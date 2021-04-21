@@ -11,7 +11,6 @@ if sys.version_info < (3, 6):
     )
 
 
-
 HERE = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(HERE, 'requirements.txt')) as fp:
     install_reqs = [r.rstrip() for r in fp.readlines()
