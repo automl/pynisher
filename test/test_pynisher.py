@@ -10,8 +10,6 @@ import sys
 
 import psutil
 
-import pytest
-
 import pynisher
 
 sys.path.append(os.path.dirname(__file__))
@@ -52,11 +50,6 @@ logger = multiprocessing.log_to_stderr()
 logger.setLevel(logging.WARNING)
 
 
-@pytest.fixture
-def logger_mock():
-    return PickableMock() if sys.version_info < (3, 7) else logger
-
-
 # The functions below are left as globals (at the top of the file)
 # as a requirement for the multiple forking processes (a function is pickled
 # in the fork server, and the workers/main process function pickle state must match)
@@ -79,10 +72,10 @@ def spawn_rogue_subprocess(num_procs=5):
 
 
 def simulate_work(size_in_mb, wall_time_in_s, num_processes, **kwargs):
-    # allocate memory (size_in_mb) with an array
+    # allocate memory (size_in_mb) with an array of the maximum 64-bit float
     # note the actual size in memory of this process is a little bit larger
-    FLOAT_MAX = 3.402823466E+38
-    A = [FLOAT_MAX] * ((1024 * size_in_mb) // 8) # noqa
+    FLOAT64_MAX = 3.402823466E+38
+    A = [FLOAT64_MAX] * ((1024 * size_in_mb) // 8) # noqa
 
     # try to spawn new processes
     if (num_processes > 0):
@@ -117,7 +110,6 @@ def svc_example(n_samples=10000, n_features=4):
 
 
 def crash_unexpectedly(signum):
-    print("going to receive signal {}.".format(signum))
     pid = os.getpid()
     time.sleep(1)
     os.kill(pid, signum)
@@ -125,14 +117,12 @@ def crash_unexpectedly(signum):
 
 
 def crash_with_exception(exception):
-    print("going to raise {}.".format(exception.__name__))
     raise exception
 
 
-def keyboard_interruption():
-    time.sleep(0.5)
+def keyboard_interruption(wait_time=0.1):
+    time.sleep(wait_time)
     crash_with_exception(KeyboardInterrupt)
-    time.sleep(0.5)
 
 
 def return_big_array(num_elements):
@@ -146,7 +136,6 @@ def cpu_usage():
 
 
 def nested_pynisher(level=2, cputime=5, walltime=5, memlimit=10e24, increment=-1, grace_period=1, logger=logger):
-    print("this is level {}".format(level))
     if level == 0:
         spawn_rogue_subprocess(10)
     else:
@@ -180,7 +169,6 @@ class test_limit_resources_module(unittest.TestCase):
     @unittest.skipIf(not all_tests, "skipping successful tests")
     def test_success(self):
 
-        print("Testing unbounded function call which have to run through!")
         local_mem_in_mb = None
         local_wall_time_in_s = None
         local_cpu_time_in_s = None
@@ -197,9 +185,30 @@ class test_limit_resources_module(unittest.TestCase):
             self.assertEqual(wrapped_function.exit_status, 0)
             self.assertEqual(wrapped_function.exitcode, 0)
 
+    @unittest.skipIf(not all_tests, "skipping out_of_memory test")
+    def test_out_of_memory(self):
+        local_mem_in_mb = 32
+        local_wall_time_in_s = None
+        local_cpu_time_in_s = None
+        local_grace_period = None
+
+        wrapped_function = pynisher.enforce_limits(
+            mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
+            logger=self.logger,
+            context=multiprocessing.get_context(context),
+            cpu_time_in_s=local_cpu_time_in_s,
+            grace_period_in_s=local_grace_period)(simulate_work)
+
+        for mem in [1024, 2048, 4096]:
+            self.assertIsNone(wrapped_function(mem, 0, 0))
+            self.assertEqual(wrapped_function.exit_status, pynisher.MemorylimitException)
+            # In github actions, randomly on python 3.6 and 3.9, the exit
+            # status is 1 that happens while running ppid_map during a MemoryError
+            # This happens randomly -- sometimes in conda others in the env python version
+            self.assertIn(wrapped_function.exitcode, (1, 0))
+
     @unittest.skipIf(not all_tests, "skipping time_out test")
     def test_time_out(self):
-        print("Testing wall clock time constraint.")
         local_mem_in_mb = None
         local_wall_time_in_s = 1
         local_cpu_time_in_s = None
@@ -223,7 +232,6 @@ class test_limit_resources_module(unittest.TestCase):
 
     @unittest.skipIf(not all_tests, "skipping too many processes test")
     def test_num_processes(self):
-        print("Testing number of processes constraint.")
         local_mem_in_mb = None
         local_num_processes = 1
         local_wall_time_in_s = None
@@ -242,7 +250,6 @@ class test_limit_resources_module(unittest.TestCase):
 
     @unittest.skipIf(not all_tests, "skipping unexpected signal test")
     def test_crash_unexpectedly(self):
-        print("Testing an unexpected signal simulating a crash.")
         wrapped_function = pynisher.enforce_limits(
             context=multiprocessing.get_context(context),
             logger=self.logger,
@@ -253,12 +260,11 @@ class test_limit_resources_module(unittest.TestCase):
 
     @unittest.skipIf(not all_tests, "skipping keyboard interruption test")
     def test_keyboard_interruption(self):
-        print("Testing keyboard interruption.")
         wrapped_function = pynisher.enforce_limits(
             context=multiprocessing.get_context(context),
             logger=self.logger,
         )(keyboard_interruption)
-        return_value = wrapped_function()
+        return_value = wrapped_function(0.0)
         self.assertIsNone(return_value)
         self.assertEqual(wrapped_function.exit_status, pynisher.KeyboardInterruptException)
         if sys.version_info < (3, 7):
@@ -266,9 +272,12 @@ class test_limit_resources_module(unittest.TestCase):
         else:
             self.assertEqual(wrapped_function.exitcode, -15)
 
+        parent = psutil.Process(os.getpid())
+        children = parent.children(recursive=True)
+        self.assertEqual(len(children), 0)
+
     @unittest.skipIf(not all_tests, "skipping unexpected signal test")
     def test_high_cpu_percentage(self):
-        print("Testing cpu time constraint.")
 
         # Empirically looks like 1 second is not enough for the process
         # to process the SIGXCPU
@@ -286,7 +295,6 @@ class test_limit_resources_module(unittest.TestCase):
 
     @unittest.skipIf(not all_tests, "skipping big data test")
     def test_big_return_data(self):
-        print("Testing big return values")
         wrapped_function = pynisher.enforce_limits(
             context=multiprocessing.get_context(context),
             logger=self.logger,
@@ -404,7 +412,6 @@ class test_limit_resources_module(unittest.TestCase):
         start = time.time()
         nested_pynisher(level=2, cputime=2, walltime=2, memlimit=None, increment=1, grace_period=gp, logger=self.logger)
         duration = time.time() - start
-        print(duration)
 
         time.sleep(1)
         p = psutil.Process()
@@ -414,7 +421,6 @@ class test_limit_resources_module(unittest.TestCase):
 
     @unittest.skipIf(not all_tests, "skipping capture stdout test")
     def test_capture_output(self):
-        print("Testing capturing of output.")
 
         time_limit = 2
         grace_period = 1
@@ -515,30 +521,6 @@ class test_limit_resources_module(unittest.TestCase):
         # Also check the return value
         self.assertEqual(wrapped_function.exit_status, 5)
         self.assertIsNone(return_value)
-
-
-@pytest.mark.parametrize("memory_limit", [1024, 2048, 4096])
-def test_out_of_memory(logger_mock, memory_limit):
-    print("Testing memory constraint.")
-    local_mem_in_mb = 32
-    local_wall_time_in_s = None
-    local_cpu_time_in_s = None
-    local_grace_period = None
-
-    wrapped_function = pynisher.enforce_limits(
-        mem_in_mb=local_mem_in_mb, wall_time_in_s=local_wall_time_in_s,
-        logger=logger_mock,
-        context=multiprocessing.get_context(context),
-        cpu_time_in_s=local_cpu_time_in_s,
-        grace_period_in_s=local_grace_period)(simulate_work)
-
-    returned_object = wrapped_function(memory_limit, 0, 0)
-    assert returned_object is None, f"returned_object={returned_object}/{vars(wrapped_function)}"
-    assert wrapped_function.exit_status == pynisher.MemorylimitException
-    # In github actions, randomly on python 3.6 and 3.9, the exit
-    # status is 1 that happens while running ppid_map during a MemoryError
-    # This happens randomly -- sometimes in conda others in the env python version
-    assert wrapped_function.exitcode in (1, 0)
 
 
 if __name__ == '__main__':
