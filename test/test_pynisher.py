@@ -81,7 +81,7 @@ def spawn_rogue_subprocess(num_procs=5):
 def simulate_work(size_in_mb, wall_time_in_s, num_processes, **kwargs):
     # allocate memory (size_in_mb) with an array
     # note the actual size in memory of this process is a little bit larger
-    A = [42.] * ((1024 * size_in_mb) // 8) # noqa
+    A = [42.] * ((1024 * 1024 * size_in_mb) // 8) # noqa
 
     # try to spawn new processes
     if (num_processes > 0):
@@ -286,6 +286,7 @@ class test_limit_resources_module(unittest.TestCase):
         time.sleep(1)
         p = psutil.Process()
         self.assertEqual(len(p.children(recursive=True)), expected_children[context])
+        # In my (nabenabe0928) local environment, I get exit status of 0.
         if sys.version_info < (3, 7) and context == 'forkserver':
             # In python 3.6 forkwerver we also get 255. In other context we get -15
             self.assertIn(wrapped_function.exitcode, (-15, 255))
@@ -423,7 +424,7 @@ class test_limit_resources_module(unittest.TestCase):
         # Test what happens if the target process does not have a sufficiently high memory limit
 
         # 2048 MB
-        dummy_content = [42.] * ((1024 * 2048) // 8) # noqa
+        dummy_content = [42.] * ((1024 * 1024 * 2048) // 8) # noqa
 
         wrapped_function = pynisher.enforce_limits(mem_in_mb=1,
                                                    context=multiprocessing.get_context(context),
