@@ -31,11 +31,16 @@ setup(
             "pre-commit",
             "pytest-cov",
             "pytest-forked",
-            "flake8-import-order",
+            "isort",
+            "black",
+            "flake8",
             "scikit-learn",
         ],
+        "docs": [
+            "sphinx"
+        ]
     },
-    author="Stefan Falkner, Christina Hernandez-Wunsch, Samuel Mueller and Matthias Feurer and Francisco Rivera",
+    author="Stefan Falkner, Christina Hernandez-Wunsch, Samuel Mueller, Matthias Feurer, Francisco Rivera, Eddi Bergman and Rene Sass",
     author_email="feurerm@informatik.uni-freiburg.de",
     description="A small Python library to limit the resources used by a function by executing it inside a subprocess.",
     long_description=long_description,
