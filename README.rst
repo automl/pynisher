@@ -1,6 +1,6 @@
-=====
-Usage
-=====
+=================
+Usage TODO UPDATE
+=================
 
 The pynisher is a little module intended to limit a functions resources.
 It starts a new process, sets the desired limits, and executes the

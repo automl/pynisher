@@ -81,7 +81,8 @@ disallow_incomplete_defs = true # ...all types
 # Packages without exported types
 [[tool.mypy.overrides]]
 module = [
-    "psutil.*"
+    "psutil.*",
+    "setuptools.*"
 ]
 ignore_missing_imports = true
 
