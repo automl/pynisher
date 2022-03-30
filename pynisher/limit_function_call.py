@@ -6,28 +6,33 @@ import os
 import sys
 import time
 import tempfile
+import platform
 
 import psutil
 
 
 class CpuTimeoutException(Exception):
     """Pynisher exception object returned on a CPU time limit."""
+
     pass
 
 
 class TimeoutException(Exception):
     """Pynisher exception object returned when hitting the time limit."""
+
     pass
 
 
 class MemorylimitException(Exception):
     """Pynisher exception object returned when hitting the memory limit."""
+
     pass
 
 
 class SubprocessException(Exception):
     """Pynisher exception object returned when receiving an OSError while
     executing the subprocess."""
+
     pass
 
 
@@ -36,12 +41,14 @@ class PynisherError(Exception):
 
     This should not happen, please open an issue at github.com/automl/pynisher
     if you run into this."""
+
     pass
 
 
 class SignalException(Exception):
     """Pynisher exception object returned in case of a signal being handled by
     the pynisher"""
+
     pass
 
 
@@ -51,20 +58,32 @@ class AnythingException(Exception):
 
     In this case, the stdout and stderr can contain helpful debug information.
     """
+
     pass
 
 
 # create the function the subprocess can execute
-def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_time_limit_in_s, num_procs,
-                    grace_period_in_s, tmp_dir, *args, **kwargs):
+def subprocess_func(
+    func,
+    pipe,
+    logger,
+    mem_in_mb,
+    cpu_time_limit_in_s,
+    wall_time_limit_in_s,
+    num_procs,
+    grace_period_in_s,
+    tmp_dir,
+    *args,
+    **kwargs,
+):
     # simple signal handler to catch the signals for time limits
     def handler(signum, frame):
         # logs message with level debug on this logger
         logger.debug("signal handler: %i" % signum)
-        if (signum == signal.SIGXCPU):
+        if signum == signal.SIGXCPU:
             # when process reaches soft limit --> a SIGXCPU signal is sent (it normally terminats the process)
             raise (CpuTimeoutException)
-        elif (signum == signal.SIGALRM):
+        elif signum == signal.SIGALRM:
             # SIGALRM is sent to process when the specified time limit to an alarm function elapses (when real or clock time elapses)
             logger.debug("timeout")
             raise (TimeoutException)
@@ -75,12 +94,13 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
     # temporary directory to store stdout and stderr
     if tmp_dir is not None:
         logger.debug(
-            'Redirecting output of the function to files. Access them via the stdout and stderr attributes of the wrapped function.')
+            "Redirecting output of the function to files. Access them via the stdout and stderr attributes of the wrapped function."
+        )
 
-        stdout = open(os.path.join(tmp_dir, 'std.out'), 'a', buffering=1)
+        stdout = open(os.path.join(tmp_dir, "std.out"), "a", buffering=1)
         sys.stdout = stdout
 
-        stderr = open(os.path.join(tmp_dir, 'std.err'), 'a', buffering=1)
+        stderr = open(os.path.join(tmp_dir, "std.err"), "a", buffering=1)
         sys.stderr = stderr
 
     # catching all signals at this point turned out to interfer with the subprocess (e.g. using ROS)
@@ -103,7 +123,8 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
     # set the memory limit
     if mem_in_mb is not None:
         # byte --> megabyte
-        mem_in_b = mem_in_mb * 1024 * 1024
+        mem_in_b = int(mem_in_mb * 1024 * 1024)
+
         # the maximum area (in bytes) of address space which may be taken by the process.
         resource.setrlimit(resource.RLIMIT_AS, (mem_in_b, mem_in_b))
 
@@ -125,12 +146,15 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
         # to the main program. If the process continues to consume CPU time,
         # it will be sent SIGXCPU once per second until the hard limit is reached,
         # at which time it is sent SIGKILL.
-        resource.setrlimit(resource.RLIMIT_CPU, (cpu_time_limit_in_s, cpu_time_limit_in_s + grace_period_in_s))
+        resource.setrlimit(
+            resource.RLIMIT_CPU,
+            (cpu_time_limit_in_s, cpu_time_limit_in_s + grace_period_in_s),
+        )
 
     # the actual function call
     try:
         logger.debug("call function")
-        return_value = ((func(*args, **kwargs), 0))
+        return_value = (func(*args, **kwargs), 0)
         logger.debug("function returned properly: {}".format(return_value))
     except MemoryError:
         return_value = (None, MemorylimitException)
@@ -154,7 +178,7 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
             pipe.send(return_value)
             pipe.close()
 
-        except: # noqa
+        except:  # noqa
             # this part should only fail if the parent process is alread dead, so there is not much to do anymore :)
             pass
         finally:
@@ -165,8 +189,17 @@ def subprocess_func(func, pipe, logger, mem_in_mb, cpu_time_limit_in_s, wall_tim
 
 
 class enforce_limits(object):
-    def __init__(self, mem_in_mb=None, cpu_time_in_s=None, wall_time_in_s=None, num_processes=None,
-                 grace_period_in_s=None, logger=None, capture_output=False, context=None):
+    def __init__(
+        self,
+        mem_in_mb=None,
+        cpu_time_in_s=None,
+        wall_time_in_s=None,
+        num_processes=None,
+        grace_period_in_s=None,
+        logger=None,
+        capture_output=False,
+        context=None,
+    ):
 
         if context is None:
             self.context = multiprocessing.get_context()
@@ -182,18 +215,33 @@ class enforce_limits(object):
         self.capture_output = capture_output
 
         if self.mem_in_mb is not None:
-            self.logger.debug("Restricting your function to {} mb memory.".format(self.mem_in_mb))
+            self.logger.debug(
+                "Restricting your function to {} mb memory.".format(self.mem_in_mb)
+            )
         if self.cpu_time_in_s is not None:
-            self.logger.debug("Restricting your function to {} seconds cpu time.".format(self.cpu_time_in_s))
+            self.logger.debug(
+                "Restricting your function to {} seconds cpu time.".format(
+                    self.cpu_time_in_s
+                )
+            )
         if self.wall_time_in_s is not None:
-            self.logger.debug("Restricting your function to {} seconds wall time.".format(self.wall_time_in_s))
+            self.logger.debug(
+                "Restricting your function to {} seconds wall time.".format(
+                    self.wall_time_in_s
+                )
+            )
         if self.num_processes is not None:
-            self.logger.debug("Restricting your function to {} threads/processes.".format(self.num_processes))
+            self.logger.debug(
+                "Restricting your function to {} threads/processes.".format(
+                    self.num_processes
+                )
+            )
         if self.grace_period_in_s is not None:
-            self.logger.debug("Allowing a grace period of {} seconds.".format(self.grace_period_in_s))
+            self.logger.debug(
+                "Allowing a grace period of {} seconds.".format(self.grace_period_in_s)
+            )
 
     def __call__(self, func):
-
         class function_wrapper(object):
             def __init__(self2, func):
                 self2.func = func
@@ -236,11 +284,14 @@ class enforce_limits(object):
                         self.wall_time_in_s,
                         self.num_processes,
                         self.grace_period_in_s,
-                        tmp_dir_name
-                    ) + args,
+                        tmp_dir_name,
+                    )
+                    + args,
                     kwargs=kwargs,
                 )
-                self.logger.debug("Function called with argument: {}, {}".format(args, kwargs))
+                self.logger.debug(
+                    "Function called with argument: {}, {}".format(args, kwargs)
+                )
 
                 # start the process
 
@@ -249,18 +300,25 @@ class enforce_limits(object):
                 child_conn.close()
 
                 try:
+
                     def read_connection():
                         connection_output = parent_conn.recv()
                         if len(connection_output) == 2:
                             self2.result, self2.exit_status = connection_output
                         elif len(connection_output) == 3:
-                            self2.result, self2.exit_status, self2.os_errno = connection_output
+                            (
+                                self2.result,
+                                self2.exit_status,
+                                self2.os_errno,
+                            ) = connection_output
                         else:
                             self2.result, self2.exit_status = (None, PynisherError)
 
                     # read the return value
-                    if (self.wall_time_in_s is not None):
-                        if parent_conn.poll(self.wall_time_in_s + self.grace_period_in_s):
+                    if self.wall_time_in_s is not None:
+                        if parent_conn.poll(
+                            self.wall_time_in_s + self.grace_period_in_s
+                        ):
                             read_connection()
                         else:
                             subproc.terminate()
@@ -271,33 +329,40 @@ class enforce_limits(object):
 
                 except EOFError:  # Don't see that in the unit tests :(
                     self.logger.debug(
-                        "Your function call closed the pipe prematurely -> Subprocess probably got an uncatchable signal.")
+                        "Your function call closed the pipe prematurely -> Subprocess probably got an uncatchable signal."
+                    )
                     self2.exit_status = AnythingException
 
-                except: # noqa
+                except:  # noqa
                     self.logger.debug("Something else went wrong, sorry.")
                 finally:
-                    self2.resources_function = resource.getrusage(resource.RUSAGE_CHILDREN)
+                    self2.resources_function = resource.getrusage(
+                        resource.RUSAGE_CHILDREN
+                    )
                     self2.resources_pynisher = resource.getrusage(resource.RUSAGE_SELF)
                     self2.wall_clock_time = time.time() - start
-                    self2.exit_status = 5 if self2.exit_status is None else self2.exit_status
+                    self2.exit_status = (
+                        5 if self2.exit_status is None else self2.exit_status
+                    )
 
                     # recover stdout and stderr if requested
                     if self.capture_output:
-                        out_file = os.path.join(tmp_dir.name, 'std.out')
+                        out_file = os.path.join(tmp_dir.name, "std.out")
                         try:
-                            with open(out_file, 'r') as fh:
+                            with open(out_file, "r") as fh:
                                 self2.stdout = fh.read()
                         except Exception as e:
                             self.logger.error(
-                                f"Cannot recover the output from {out_file} due to {e}")
-                        err_file = os.path.join(tmp_dir.name, 'std.err')
+                                f"Cannot recover the output from {out_file} due to {e}"
+                            )
+                        err_file = os.path.join(tmp_dir.name, "std.err")
                         try:
-                            with open(os.path.join(tmp_dir.name, 'std.err'), 'r') as fh:
+                            with open(os.path.join(tmp_dir.name, "std.err"), "r") as fh:
                                 self2.stderr = fh.read()
                         except Exception as e:
                             self.logger.error(
-                                f"Cannot recover the output from {err_file} due to {e}")
+                                f"Cannot recover the output from {err_file} due to {e}"
+                            )
 
                         tmp_dir.cleanup()
 
@@ -305,6 +370,6 @@ class enforce_limits(object):
                     subproc.join()
                     # exitcode is only available after join
                     self2.exitcode = subproc.exitcode
-                return (self2.result)
+                return self2.result
 
-        return (function_wrapper(func))
+        return function_wrapper(func)
