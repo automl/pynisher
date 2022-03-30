@@ -1,12 +1,12 @@
 #! /bin/python
-import resource
-import signal
 import multiprocessing
 import os
-import sys
-import time
-import tempfile
 import platform
+import resource
+import signal
+import sys
+import tempfile
+import time
 
 import psutil
 

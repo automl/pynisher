@@ -1,24 +1,23 @@
 #! /bin/python
-import time
+import logging
 import multiprocessing
-import unittest
-import unittest.mock
 import os
 import signal
-import logging
 import sys
+import time
 
 import psutil
 
-import pytest
-
 import pynisher
 
-sys.path.append(os.path.dirname(__file__))
-from pynisher_utils import (
-    PickableMock,
-)  # noqa (E402: module level import  not at top of file)
+import pytest
+import unittest
+import unittest.mock
 
+sys.path.append(os.path.dirname(__file__))
+from pynisher_utils import (  # noqa (E402: module level import  not at top of file)
+    PickableMock,
+)
 
 try:
     import sklearn  # noqa
@@ -97,8 +96,8 @@ def simulate_work(size_in_mb, wall_time_in_s, num_processes, **kwargs):
 
 
 def svm_example(n_samples=10000, n_features=100):
-    from sklearn.svm import SVR
     from sklearn.datasets import make_regression
+    from sklearn.svm import SVR
 
     X, Y = make_regression(n_samples, n_features)
     m = SVR()
@@ -107,8 +106,8 @@ def svm_example(n_samples=10000, n_features=100):
 
 
 def svc_example(n_samples=10000, n_features=4):
-    from sklearn.svm import SVC
     from sklearn.datasets import make_classification
+    from sklearn.svm import SVC
 
     X, Y = make_classification(n_samples, n_features)
     # pp = PolynomialFeatures(degree=3)
