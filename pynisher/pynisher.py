@@ -118,10 +118,8 @@ class Pynisher(ContextDecorator):
         # the result back.
         send_pipe, recieve_pipe = self.context.Pipe(duplex=False)
 
-        # The limiter's __call__ will be what's run inside the subprocess, therefor it
-        # needs access to vital information, namely:
-        # * The function, it's arguments and its kwarguments
-        # * The `recieve_pipe` through which it it should `output` it's results to
+        # The limiter is what is in charge of limiting resources once inside the subprocess
+        # It gets the `recieve_pipe` through which it it should `output` it's results to
         limiter = Limiter.create(
             func=self.func,
             output=recieve_pipe,
@@ -132,6 +130,7 @@ class Pynisher(ContextDecorator):
         )
 
         # We now create the subprocess and let it know that it should call the limiter's __call__
+        # with the args and kwargs for the function being limited
         subprocess = self.context.Process(
             target=limiter.__call__,
             args=args,
@@ -144,12 +143,14 @@ class Pynisher(ContextDecorator):
             process_error = None
             result = None
 
+            # Let loose and hope it doesn't raise
             subprocess.start()
 
-            # Will block here until a result is given back
+            # Will block here until a result is given back from the subprocess
             result, process_error = recieve_pipe.recv()
 
-            # Block here until the subprocess has joined up
+            # Block here until the subprocess has joined back up, this should be almost
+            # immediatly after sending back the result through `recv`
             subprocess.join()
 
             # If we are allowed to raise, we raise a new exception here to get a traceback
@@ -168,7 +169,7 @@ class Pynisher(ContextDecorator):
                     raise e
         finally:
             send_pipe.close()
-            recieve_pipe.close()
+            recieve_pipe.close()  # We close this in the subprocess but just incase it crashed
 
         return result
 
