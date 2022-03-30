@@ -1,4 +1,4 @@
-from pynisher.limiters.limiters import Limiter
+from pynisher.limiters.limiter import Limiter
 
 
 class LimiterLinux(Limiter):

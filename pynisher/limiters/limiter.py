@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable
 
 import platform
-from multiprocessing import Connection
+from multiprocessing.connection import Connection
 
 
 class Limiter(ABC):
@@ -82,9 +82,7 @@ class Limiter(ABC):
             result = self.func(*args, **kwargs)
             error = None
 
-            package = (result, error)
-
-            self.output.send(package)
+            self.output.send((result, error))
 
         except Exception as e:
             # If for whatever reason, we can't send something or the sending fails, we catch
@@ -92,9 +90,7 @@ class Limiter(ABC):
             result = None
             error = e
 
-            package = (result, error)
-
-            self.output.send(package)
+            self.output.send((result, error))
 
         finally:
             # We are done
@@ -109,7 +105,7 @@ class Limiter(ABC):
         memory: int | None = None,
         cpu_time: int | None = None,
         wall_time: int | None = None,
-        grace_period: int | None = None,
+        grace_period: int = 0,
     ) -> Limiter:
         """For full documentation, see __init__."""
         # NOTE: __init__ param duplication
@@ -143,6 +139,8 @@ class Limiter(ABC):
             )
 
         elif system_name == "Darwin":
+            from pynisher.limiters.mac import LimiterDarwin
+
             return LimiterDarwin(
                 func=func,
                 output=output,
