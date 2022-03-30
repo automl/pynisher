@@ -142,11 +142,15 @@ class Pynisher(ContextDecorator):
 
         try:
             process_error = None
+            result = None
 
             subprocess.start()
 
             # Will block here until a result is given back
             result, process_error = recieve_pipe.recv()
+
+            # Block here until the subprocess has joined up
+            subprocess.join()
 
             # If we are allowed to raise, we raise a new exception here to get a traceback
             # from this master process
@@ -157,11 +161,11 @@ class Pynisher(ContextDecorator):
             # If raising, we get the error from this process and append the traceback from
             # the error in the subprocess, if it's available. There could also be an issue
             # from just subprocess.start(), in which case `process_error` will be None
-            if process_error is not None:
-                raise e.with_traceback(process_error.__traceback__)
-            else:
-                raise e
-
+            if self.raises:
+                if process_error is not None:
+                    raise e.with_traceback(process_error.__traceback__)
+                else:
+                    raise e
         finally:
             send_pipe.close()
             recieve_pipe.close()
