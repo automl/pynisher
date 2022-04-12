@@ -1,8 +1,7 @@
 """These tests ensure the API of how this can be used is enforced."""
-from typing import Any
+import os
 
 from pynisher import Pynisher, limit
-import os
 
 import pytest
 
@@ -42,7 +41,7 @@ def test_limit_gives_helpful_err_message_with_misuse() -> None:
 
     with pytest.raises(ValueError, match=r"Please pass arguments to decorator `limit`"):
 
-        @limit
+        @limit  # type: ignore
         def f(x: int) -> int:
             return x
 
