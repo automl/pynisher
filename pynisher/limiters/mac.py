@@ -9,33 +9,14 @@ https://developer.apple.com/library/archive/documentation/System/Conceptual/ManP
 """
 from __future__ import annotations
 
-from pynisher.limiters.limiter import Limiter
-import signal
 import resource
+import signal
 
-from pynisher.exceptions import (
-    CpuTimeoutException,
-    TimeoutException,
-    SignalException,
-)
+from pynisher.exceptions import CpuTimeoutException, SignalException, TimeoutException
+from pynisher.limiters.limiter import Limiter
 
 
 class LimiterMac(Limiter):
-    def limit_memory(self) -> None:
-        """Limit's the memory of this process."""
-        raise NotImplementedError()
-
-    def limit_cpu_time(self) -> None:
-        """Limit's the cpu time of this process."""
-        raise NotImplementedError()
-
-    def limit_wall_time(self) -> None:
-        """Limit's the wall time of this process."""
-        raise NotImplementedError()
-
-
-class LimiterDarwin(Limiter):
-
     @staticmethod
     def _handler(signum: signal.Signals, frame: signal.FrameType | None) -> None:
         # SIGXCPU: cpu_time `setrlimit(RLIMIT_CPU, (soft, hard))`
@@ -124,8 +105,14 @@ class LimiterDarwin(Limiter):
             leaving type as str until known.
         """
         # https://stackoverflow.com/a/39765583/5332072
-        with open('/proc/self/status') as f:
+        with open("/proc/self/status") as f:
             status = f.readlines()
 
         vmpeak = next(s for s in status if s.startswith("VmPeak:"))
         return vmpeak
+
+
+class LimiterDarwin(LimiterMac):
+    """Incase we need something specific for DARWIN"""
+
+    pass

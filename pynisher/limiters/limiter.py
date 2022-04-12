@@ -112,6 +112,14 @@ class Limiter(ABC):
         #
         #   I'm not delighted by the duplication of the __init__ params but this keeps things
         #   typesafe and referencable in case we need to validate
+        arguments = {
+            "func": func,
+            "output": output,
+            "memory": memory,
+            "cpu_time": cpu_time,
+            "wall_time": wall_time,
+            "grace_period": grace_period,
+        }
 
         # There is probably a lot more things to check but for now this covers our use case
         system_name = platform.system()
@@ -128,27 +136,15 @@ class Limiter(ABC):
         #
         if system_name == "Linux":
             from pynisher.limiters.linux import LimiterLinux
-
-            return LimiterLinux(
-                func=func,
-                output=output,
-                memory=memory,
-                cpu_time=cpu_time,
-                wall_time=wall_time,
-                grace_period=grace_period,
-            )
+            return LimiterLinux(**arguments)
 
         elif system_name == "Darwin":
             from pynisher.limiters.mac import LimiterDarwin
+            return LimiterDarwin(**arguments)
 
-            return LimiterDarwin(
-                func=func,
-                output=output,
-                memory=memory,
-                cpu_time=cpu_time,
-                wall_time=wall_time,
-                grace_period=grace_period,
-            )
+        elif system_name == "Windows":
+            from pynisher.limiters.windows import LimiterWindows
+            return LimiterWindows(**arguments)
 
         else:
             raise NotImplementedError(
