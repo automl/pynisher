@@ -6,6 +6,9 @@ https://developer.apple.com/library/archive/documentation/System/Conceptual/ManP
 For documentation on MAC specific signal alarms:
 ** `signals` **
 https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/sigaction.2.html
+
+This module and the Linux limiter share almost identical code but we keep them seperate
+incase of specific modules or changes needed, keeping full .
 """
 from __future__ import annotations
 
@@ -57,7 +60,7 @@ class LimiterMac(Limiter):
         """
         # Convert megabyte to byte
         mem_in_b = int(memory * 1024 * 1024)
-        resource.setrlimit(resource.RLIMIT_RSS, (mem_in_b, mem_in_b))
+        resource.setrlimit(resource.RLIMIT_AS, (mem_in_b, mem_in_b))
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
         """Limit the cpu time for this process.
