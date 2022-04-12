@@ -63,7 +63,7 @@ class Pynisher(ContextDecorator):
         """
         if isinstance(memory, tuple):
             x, unit = memory
-            memory = memconvert(x, unit, to="B")
+            memory = int(memconvert(x, frm=unit, to="B"))
 
         self.func = func
         self.name = name

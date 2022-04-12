@@ -56,11 +56,9 @@ class LimiterLinux(Limiter):
         Parameters
         ----------
         memory : int
-            The memory limit in MB
+            The memory limit in bytes
         """
-        # Convert megabyte to byte
-        bytes = memory * (2 ** 20)
-        resource.setrlimit(resource.RLIMIT_AS, (bytes, bytes))
+        resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
         """Limit the cpu time for this process.

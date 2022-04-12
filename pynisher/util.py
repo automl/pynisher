@@ -10,8 +10,8 @@ _unit_table = {
 }
 
 
-def memconvert(x: float, unit: str = "B", *, to: str = "B") -> float:
-    """Convert between units
+def memconvert(x: float, *, frm: str = "B", to: str = "B") -> float:
+    """Convert between units, assumes input is in bytes and assumes output is bytes
 
     Parameters
     ----------
@@ -29,13 +29,17 @@ def memconvert(x: float, unit: str = "B", *, to: str = "B") -> float:
     float
         The memory amount
     """
-    u_from = _unit_table[unit]
-    u_to = _unit_table[to]
+    u_from = _unit_table[frm.upper()]
+    u_to = _unit_table[to.upper()]
 
     as_bytes = x * u_from
     as_target = as_bytes / u_to
 
-    return as_target
+    # We can't see a use case for float Bytes
+    if to.upper() == "B":
+        return int(as_target)
+    else:
+        return as_target
 
 
 class Monitor:
@@ -71,4 +75,4 @@ class Monitor:
             raise ValueError(f"No memory kind {kind}, use one from {mem}")
 
         usage = getattr(mem, kind)
-        return memconvert(usage, to=units)
+        return memconvert(usage, frm="B", to=units)

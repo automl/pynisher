@@ -56,11 +56,10 @@ class LimiterMac(Limiter):
         Parameters
         ----------
         memory : int
-            The memory limit in MB
+            The memory limit in bytes
         """
         # Convert megabyte to byte
-        mem_in_b = int(memory * 1024 * 1024)
-        resource.setrlimit(resource.RLIMIT_AS, (mem_in_b, mem_in_b))
+        resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
         """Limit the cpu time for this process.
