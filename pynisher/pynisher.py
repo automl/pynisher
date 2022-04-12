@@ -8,6 +8,7 @@ from functools import wraps
 
 from pynisher.limiters import Limiter
 from pynisher.exceptions import MemorylimitException
+from pynisher.util import memconvert
 
 
 class Pynisher(ContextDecorator):
@@ -18,7 +19,7 @@ class Pynisher(ContextDecorator):
         func: Callable,
         *,
         name: str | None = None,
-        memory: int | None = None,
+        memory: int | tuple[int, str] | None = None,
         cpu_time: int | None = None,
         wall_time: int | None = None,
         grace_period: int = 0,
@@ -35,9 +36,14 @@ class Pynisher(ContextDecorator):
             A name to give the process that gets created, defaults to whatever multiprocessing.Process
             defaults to.
 
-        memory : int | None = None
-            The amount of memory in bytes to limit by in MB
-            TODO: Could optionally accept a tuple (4, "MB") and infer single int as Bytes
+        memory : int | tuple[int, str] | None = None
+            The amount of memory to limit by. If `tuple`, specify with units like (4, "MB").
+            Possible units are "B", "KB", "MB", "GB".
+
+            Processes are given some dedicated size before any limitation can take place.
+            These will run fine until a new allocation takes place.
+            This means a process can technically run in a limit of 1 Byte, up until the
+            point it tries to allocate anything.
 
         cpu_time : int | None = None
             The amount of cpu time in second to limit to
@@ -55,10 +61,14 @@ class Pynisher(ContextDecorator):
         raises : bool = True
             Whether any error from the subprocess should filter up and be raised.
         """
+        if isinstance(memory, tuple):
+            x, unit = memory
+            memory = memconvert(x, unit, to="B")
+
         self.func = func
         self.name = name
-        self.memory = memory
         self.cpu_time = cpu_time
+        self.memory = memory
         self.wall_time = wall_time
         self.grace_period = grace_period
         self.raises = raises
@@ -199,7 +209,7 @@ T = TypeVar("T")
 #
 def limit(
     name: str | None = None,
-    memory: int | None = None,
+    memory: int | tuple[int, str] | None = None,
     cpu_time: int | None = None,
     wall_time: int | None = None,
     grace_period: int = 0,
@@ -219,12 +229,17 @@ def limit(
     Parameters
     ----------
     name : str | None
-        A name to give the process that gets created, defaults to whatever multiprocessing.Process
-        defaults to.
+        A name to give the process that gets created, defaults to whatever
+        multiprocessing.Process defaults to.
 
-    memory : int | None = None
-        The amount of memory in bytes to limit by
-        TODO: Could optionally accept a tuple (4, "MB") and infer single int as Bytes
+    memory : int | tuple[int, str] | None = None
+        The amount of memory to limit by. If `tuple`, specify with units like (4, "MB").
+        Possible units are "B", "KB", "MB", "GB".
+
+        Processes are given some dedicated size before any limitation can take place.
+        These will run fine until a new allocation takes place.
+        This means a process can technically run in a limit of 1 Byte, up until the
+        point it tries to allocate anything.
 
     cpu_time : int | None = None
         The amount of cpu time in second to limit to

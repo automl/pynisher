@@ -1,24 +1,31 @@
-import time
-import sys
 from pynisher import Pynisher
+from pynisher.util import memconvert
 from pynisher.exceptions import MemorylimitException
 
+import pytest
 
-def func() -> int:
-    array = [i for i in range(10000000)]
-    # This array is approx 84.97 MB
-    # size = sys.getsizeof(array) / 1024 / 1024
+
+def mb_as_bytes(x: float) -> int:
+    return int(x * (2**20))
+
+
+def usememory(x: float) -> None:
+    nbytes = memconvert(x, "MB")
+    bytearray(nbytes)
     return
 
 
-def test_fail():
-    try:
-        with Pynisher(func, memory=90) as restricted_func:
-            restricted_func()
-    except MemorylimitException:
-        pass
+@pytest.mark.parametrize("limit_mb", [1, 5, 100, 1000])
+def test_fail(limit_mb: int) -> None:
+    """Using more than the allocated memory should raise an Error"""
+    restricted_func = Pynisher(usememory, memory=limit)
+
+    with pytest.raises(MemorylimitException):
+        restricted_func(limit * 2)
 
 
-def test_success():
-    with Pynisher(func, memory=5) as restricted_func:
-        restricted_func()
+@pytest.mark.parametrize("limit_mb", [1000])
+def test_success(limit_mb: int) -> None:
+    """Using less than the allocated memory should be fine"""
+    restricted_func = Pynisher(usememory, memory=limit)
+    restricted_func(int(limit / 1000))

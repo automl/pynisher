@@ -1,3 +1,3 @@
-from pynisher.pynisher import Pynisher
+from pynisher.pynisher import Pynisher, limit
 
-__all__ = ["Pynisher"]
+__all__ = ["Pynisher", "limit"]
