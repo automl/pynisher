@@ -7,6 +7,7 @@ from contextlib import ContextDecorator
 from functools import wraps
 
 from pynisher.limiters import Limiter
+from pynisher.exceptions import MemorylimitException
 
 
 class Pynisher(ContextDecorator):
@@ -35,7 +36,7 @@ class Pynisher(ContextDecorator):
             defaults to.
 
         memory : int | None = None
-            The amount of memory in bytes to limit by
+            The amount of memory in bytes to limit by in MB
             TODO: Could optionally accept a tuple (4, "MB") and infer single int as Bytes
 
         cpu_time : int | None = None
@@ -166,7 +167,12 @@ class Pynisher(ContextDecorator):
         # from this master process.
         if process_error is not None and self.raises:
             suberr, tb = process_error
-            errcls = suberr.__class__
+
+            # For backwards
+            if isinstance(suberr, MemoryError):
+                errcls = MemorylimitException
+            else:
+                errcls = suberr.__class__
 
             # We create an error of the same type and append the subporccess traceback
             msg = f"Process failed with the below traceback\n\n{tb}"
