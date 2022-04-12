@@ -8,7 +8,7 @@ For documentation on MAC specific signal alarms:
 https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/sigaction.2.html
 
 This module and the Linux limiter share almost identical code but we keep them seperate
-incase of specific modules or changes needed, keeping full .
+incase of specific modules or changes needed
 """
 from __future__ import annotations
 
@@ -97,22 +97,6 @@ class LimiterMac(Limiter):
         """
         signal.signal(signal.SIGALRM, LimiterDarwin._handler)
         signal.alarm(wall_time)
-
-    def _debug_memory(self) -> str:
-        """Prints the memory used by the process
-
-        Returns
-        -------
-        (usage: str)
-            Returns the usage as a string, not sure if always KB but
-            leaving type as str until known.
-        """
-        # https://stackoverflow.com/a/39765583/5332072
-        with open("/proc/self/status") as f:
-            status = f.readlines()
-
-        vmpeak = next(s for s in status if s.startswith("VmPeak:"))
-        return vmpeak
 
 
 class LimiterDarwin(LimiterMac):
