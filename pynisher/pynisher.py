@@ -116,13 +116,13 @@ class Pynisher(ContextDecorator):
         # We can safely ignore the input pipe as we do not feed data through
         # to the pipe. The output pipe will be used by the subprocess to communicate
         # the result back.
-        send_pipe, recieve_pipe = self.context.Pipe(duplex=False)
+        recieve_pipe, send_pipe = self.context.Pipe(duplex=False)
 
         # The limiter is what is in charge of limiting resources once inside the subprocess
         # It gets the `recieve_pipe` through which it it should `output` it's results to
         limiter = Limiter.create(
             func=self.func,
-            output=recieve_pipe,
+            output=send_pipe,
             memory=self.memory,
             cpu_time=self.cpu_time,
             wall_time=self.wall_time,
