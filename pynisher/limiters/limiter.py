@@ -69,13 +69,13 @@ class Limiter(ABC):
         try:
             # Go through each limitation we can apply, relying
             if self.memory is not None:
-                self.limit_memory()
+                self.limit_memory(self.memory)
 
             if self.cpu_time is not None:
-                self.limit_cpu_time()
+                self.limit_cpu_time(self.cpu_time)
 
             if self.wall_time is not None:
-                self.limit_wall_time()
+                self.limit_wall_time(self.wall_time)
 
             # Call our function and if there are no exceptions raised, default to
             # no error or trace
@@ -156,16 +156,16 @@ class Limiter(ABC):
             )
 
     @abstractmethod
-    def limit_memory(self) -> None:
+    def limit_memory(self, memory: int) -> None:
         """Limit's the memory of this process."""
         ...
 
     @abstractmethod
-    def limit_cpu_time(self) -> None:
+    def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
         """Limit's the cpu time of this process."""
         ...
 
     @abstractmethod
-    def limit_wall_time(self) -> None:
+    def limit_wall_time(self, wall_time: int) -> None:
         """Limit's the wall time of this process."""
         ...
