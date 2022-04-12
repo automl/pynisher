@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable
 
 import platform
+import sys
+import traceback
 from multiprocessing.connection import Connection
 
 
@@ -88,7 +90,8 @@ class Limiter(ABC):
             # If for whatever reason, we can't send something or the sending fails, we catch
             # the error and try to send that. If that also fails, there's not much we can do.
             result = None
-            error = e
+            str_traceback = "".join(traceback.format_exception(*sys.exc_info()))
+            error = (e, str_traceback)  # The traceback is lost if not stored
 
             self.output.send((result, error))
 

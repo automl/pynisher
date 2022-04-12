@@ -139,37 +139,38 @@ class Pynisher(ContextDecorator):
             name=self.name,
         )
 
+        process_error = None
+        result = None
+
+        # Let loose and hope it doesn't raise
+        subprocess.start()
+
         try:
-            process_error = None
-            result = None
-
-            # Let loose and hope it doesn't raise
-            subprocess.start()
-
             # Will block here until a result is given back from the subprocess
             result, process_error = recieve_pipe.recv()
+        except EOFError:
+            # This is raised when there is nothing left in the pipe to recieve
+            # and the other end was closed. Should be fine without it but it's
+            # some good extra backup
+            pass
 
-            # Block here until the subprocess has joined back up, this should be almost
-            # immediatly after sending back the result through `recv`
-            subprocess.join()
+        # Block here until the subprocess has joined back up, this should be almost
+        # immediatly after sending back the result through `recv`
+        subprocess.join()
 
-            # If we are allowed to raise, we raise a new exception here to get a traceback
-            # from this master process
-            if process_error is not None and self.raises:
-                raise process_error
+        # send_pipe should be closed by the subprocess but just incase, close anyways
+        send_pipe.close()
+        recieve_pipe.close()
 
-        except Exception as e:
-            # If raising, we get the error from this process and append the traceback from
-            # the error in the subprocess, if it's available. There could also be an issue
-            # from just subprocess.start(), in which case `process_error` will be None
-            if self.raises:
-                if process_error is not None:
-                    raise e.with_traceback(process_error.__traceback__)
-                else:
-                    raise e
-        finally:
-            send_pipe.close()
-            recieve_pipe.close()  # We close this in the subprocess but just incase it crashed
+        # If we are allowed to raise, we raise a new exception here to get a traceback
+        # from this master process.
+        if process_error is not None and self.raises:
+            suberr, tb = process_error
+            errcls = suberr.__class__
+
+            # We create an error of the same type and append the subporccess traceback
+            msg = f"Process failed with the below traceback\n\nTraceback:\n\n{tb}"
+            raise errcls(msg) from suberr
 
         return result
 
@@ -235,6 +236,14 @@ def limit(
     raises : bool = True
         Whether any error from the subprocess should filter up and be raised.
     """
+    # Incase the first argument is a function, we assume it was missued
+    #
+    # @limit
+    # def f(): ...
+    #
+    # In this case, the function f will be passed as the first arg, `name`
+    if callable(name):
+        raise ValueError("Please pass arguments to decorator `limit`")
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
