@@ -29,15 +29,17 @@ setup(
     version="0.7.0",
     packages=["pynisher"],
     install_requires=install_reqs,
-    extras_require={
+    extras_requires={
         "test": [
             "pytest",
             "pre-commit",
             "pytest-cov",
             "pytest-forked",
+            "pydocstyle[toml]"
             "isort",
             "black",
             "flake8",
+            "mypy",
             "scikit-learn",
         ],
         "docs": ["sphinx"],
