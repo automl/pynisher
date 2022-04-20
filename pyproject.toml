@@ -83,6 +83,7 @@ disallow_incomplete_defs = true # ...all types
 module = [
     "psutil.*",
     "setuptools.*",
+    "pytest.*",
 ]
 ignore_missing_imports = true
 
