@@ -16,7 +16,7 @@ from typing import Any
 
 import resource
 import signal
-import warnings
+import sys
 
 from pynisher.exceptions import CpuTimeoutException, TimeoutException
 from pynisher.limiters.limiter import Limiter
@@ -71,7 +71,7 @@ class LimiterMac(Limiter):
         try:
             resource.setrlimit(resource.RLIMIT_AS, (memory, resource.RLIM_INFINITY))
         except Exception:
-            warnings.warn("Limiting memory is not supported on your system.")
+            print("Limiting memory is not supported on your system.", file=sys.stderr)
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
