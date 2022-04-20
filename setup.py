@@ -1,34 +1,17 @@
-import os
-import sys
+from pathlib import Path
 
 from setuptools import setup
 
-# Raise warnings if system version is not greater than 3.7
-if not sys.version_info >= (3, 7):
-    raise ValueError(
-        "Unsupported Python version %d.%d.%d found. Pynisher requires Python "
-        "3.7 or higher."
-        % (sys.version_info.major, sys.version_info.minor, sys.version_info.micro)
-    )
+readme = Path(__file__).parent / "README.md"
 
-
-HERE = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(HERE, "requirements.txt")) as fp:
-    install_reqs = [
-        r.rstrip()
-        for r in fp.readlines()
-        if not r.startswith("#") and not r.startswith("git+")
-    ]
-
-
-with open("README.rst") as fh:
+with readme.open("r") as fh:
     long_description = fh.read()
 
 setup(
     name="pynisher",
     version="0.7.0",
     packages=["pynisher"],
-    install_requires=install_reqs,
+    install_requires=["psutil"],
     extras_require={
         "test": [
             "pytest",
@@ -44,9 +27,12 @@ setup(
         ],
         "docs": "sphinx",
     },
-    author="Stefan Falkner, Christina Hernandez-Wunsch, Samuel Mueller, Matthias Feurer, Francisco Rivera, Eddie Bergman and Rene Sass",
+    author=(
+        "Stefan Falkner, Christina Hernandez-Wunsch, Samuel Mueller,"
+        "Matthias Feurer, Francisco Rivera, Eddie Bergman and Rene Sass",
+    ),
     author_email="feurerm@informatik.uni-freiburg.de",
-    description="A small Python library to limit the resources used by a function by executing it inside a subprocess.",
+    description="A library to limit the resources used by functions using subprocesses",
     long_description=long_description,
     long_description_content_type="text/markdown",
     include_package_data=False,
