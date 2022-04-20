@@ -8,6 +8,7 @@ import platform
 import sys
 import traceback
 from multiprocessing.connection import Connection
+import warnings
 
 from pynisher.util import Monitor
 
@@ -77,7 +78,7 @@ class Limiter(ABC):
                 # We should probably warn if we exceed the memory usage before
                 # any limitation is set
                 memusage = Monitor().memory("B")
-                if memusage >= memory:
+                if memusage >= self.memory:
                     warnings.warn(
                         f"Current memory usage in new process is {memusage}B but "
                         f" setting limit to {self.memory}B. Likely to fail, try"
