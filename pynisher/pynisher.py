@@ -7,8 +7,8 @@ from contextlib import ContextDecorator
 from functools import wraps
 
 from pynisher.limiters import Limiter
-from pynisher.exceptions import MemorylimitException
 from pynisher.util import memconvert
+from pynisher.exceptions import MemoryLimitException
 
 
 class Pynisher(ContextDecorator):
@@ -183,7 +183,9 @@ class Pynisher(ContextDecorator):
             packet = recieve_pipe.recv()
 
             if packet is None:
-                raise MemorylimitException
+                raise MemoryLimitException(
+                    "Sending the error from the subprocess caused a memory issue"
+                )
 
             result, process_error = packet
 
@@ -206,13 +208,12 @@ class Pynisher(ContextDecorator):
         if process_error is not None and self.raises:
             suberr, tb = process_error
 
-            # For backwards
             if isinstance(suberr, MemoryError):
-                errcls = MemorylimitException
+                errcls = MemoryLimitException
             else:
                 errcls = suberr.__class__
 
-            # We create an error of the same type and append the subporccess traceback
+            # We create an error of the same type and append the subprocess traceback
             msg = f"Process failed with the below traceback\n\n{tb}"
             raise errcls(msg) from suberr
 

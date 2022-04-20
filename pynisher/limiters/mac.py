@@ -18,7 +18,7 @@ import resource
 import signal
 import warnings
 
-from pynisher.exceptions import CpuTimeoutException, SignalException, TimeoutException
+from pynisher.exceptions import CpuTimeoutException, TimeoutException
 from pynisher.limiters.limiter import Limiter
 
 
@@ -47,7 +47,7 @@ class LimiterMac(Limiter):
         #   We have caught some unknown signal. This means we are too restrictive
         #   with the signals we are catching.
         else:
-            raise SignalException
+            raise NotImplementedError(f"Does not handle signal with id {signum}")
 
     def limit_memory(self, memory: int) -> None:
         """Limit the addressable memory

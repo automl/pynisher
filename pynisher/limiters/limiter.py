@@ -10,7 +10,6 @@ import traceback
 from multiprocessing.connection import Connection
 
 
-
 class Limiter(ABC):
     """Defines how to limit resources for a given system."""
 
@@ -148,14 +147,17 @@ class Limiter(ABC):
         #
         if system_name == "linux":
             from pynisher.limiters.linux import LimiterLinux
+
             return LimiterLinux(**arguments)  # type: ignore
 
         elif system_name == "darwin":
             from pynisher.limiters.mac import LimiterMac
+
             return LimiterMac(**arguments)  # type: ignore
 
         elif system_name == "windows":
             from pynisher.limiters.windows import LimiterWindows
+
             return LimiterWindows(**arguments)  # type: ignore
 
         else:

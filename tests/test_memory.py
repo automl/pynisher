@@ -2,7 +2,7 @@ import sys
 
 from pynisher import Pynisher
 from pynisher.util import memconvert, Monitor
-from pynisher.exceptions import MemorylimitException
+from pynisher.exceptions import MemoryLimitException
 
 import pytest
 
@@ -24,7 +24,7 @@ def test_fail(limit: int) -> None:
 
     restricted_func = Pynisher(usememory, memory=(limit, "MB"))
 
-    with pytest.raises(MemorylimitException):
+    with pytest.raises(MemoryLimitException):
         allocation_bytes = memconvert(allocate, frm="MB", to="B")
         restricted_func(allocation_bytes)
 

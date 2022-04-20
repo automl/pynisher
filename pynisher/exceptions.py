@@ -1,40 +1,28 @@
-class CpuTimeoutException(Exception):
+class PynisherExcpetion(Exception):
+    """Base class for any Pynisher related exceptions"""
+
+    pass
+
+
+class TimeoutException(PynisherExcpetion):
+    """Base class for Timeout based errors"""
+
+    pass
+
+
+class CpuTimeoutException(TimeoutException):
     """Exception when hitting CPU time limit."""
 
     pass
 
 
-class TimeoutException(Exception):
-    """Exception when hitting the time limit."""
+class WallTimeoutException(TimeoutException):
+    """Exception when hitting the wall time limit."""
 
     pass
 
 
-class MemorylimitException(Exception):
-    """Exception when hitting the memory limit"""
-
-    pass
-
-
-class SubprocessException(Exception):
-    """Exception when receiving an OSError while executing the subprocess."""
-
-    pass
-
-
-class PynisherError(Exception):
-    """Exception in case of an internal error"""
-
-    pass
-
-
-class SignalException(Exception):
-    """Exception when a process signal was caught by the pynisher"""
-
-    pass
-
-
-class AnythingException(Exception):
-    """Exception for anything else"""
+class MemoryLimitException(PynisherExcpetion, MemoryError):
+    """Exception when hitting the Memory Limit."""
 
     pass
