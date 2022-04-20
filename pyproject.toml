@@ -63,6 +63,9 @@ add-ignore = [ # http://www.pydocstyle.org/en/stable/error_codes.html
     "D413", # Missing blank line after last section
     "D415"  # First line should end with a period, question mark, or exclamation point
 ]
+add-select = [
+    "D417", # Missing argument descriptions in the docstring (removed with numpy convention)
+]
 
 [tool.mypy]
 python_version = "3.7"
