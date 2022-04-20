@@ -77,6 +77,10 @@ class Pynisher(ContextDecorator):
         if grace_period <= 1:
             raise ValueError(f"`grace_period` ({grace_period}) must be int >= 1")
 
+        valid_contexts = ["fork", "spawn", "forkserver"]
+        if context not in valid_contexts:
+            raise ValueError(f"`context` ({context}) must be in {valid_contexts}")
+
         self.func = func
         self.name = name
         self.cpu_time = cpu_time
