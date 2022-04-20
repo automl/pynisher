@@ -16,6 +16,7 @@ from typing import Any
 
 import resource
 import signal
+import warnings
 
 from pynisher.exceptions import CpuTimeoutException, SignalException, TimeoutException
 from pynisher.limiters.limiter import Limiter
@@ -78,11 +79,12 @@ class LimiterLinux(Limiter):
             The amount of extra time given to the process before a SIGKILL
             is sent.
         """
+        if grace_period < 1:
+            warnings.warn(f"grace_period ({grace_period}) set to 1, must be >= 1 on Linux")
+            grace_period = 1
+
         soft = cpu_time
         hard = cpu_time + grace_period
-
-        if hard < (soft + 1):
-            hard = soft + 1
 
         resource.setrlimit(resource.RLIMIT_CPU, (soft, hard))
         signal.signal(signal.SIGXCPU, LimiterLinux._handler)

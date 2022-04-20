@@ -86,6 +86,7 @@ class LimiterMac(Limiter):
         """
         # It seems like everything below 1 fails.
         if cpu_time < 1:
+            warnings.warn(f"cpu_time ({cpu_time}) set to 1, must be >= 1 on Mac")
             cpu_time = 1
 
         # No extra grace periods necessary for mac 😎
