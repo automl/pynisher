@@ -125,7 +125,7 @@ class Limiter(ABC):
         }
 
         # There is probably a lot more things to check but for now this covers our use case
-        system_name = platform.system()
+        system_name = platform.system().lower()
 
         # NOTE: Imports inside if statements
         #
@@ -137,15 +137,15 @@ class Limiter(ABC):
         #   the `resources` module is not avialable on Windows and so importing that would
         #   cause issues.
         #
-        if system_name == "Linux":
+        if system_name == "linux":
             from pynisher.limiters.linux import LimiterLinux
             return LimiterLinux(**arguments)  # type: ignore
 
-        elif system_name == "Darwin":
+        elif system_name == "darwin":
             from pynisher.limiters.mac import LimiterMac
             return LimiterDarwin(**arguments)  # type: ignore
 
-        elif system_name == "Windows":
+        elif system_name == "windows":
             from pynisher.limiters.windows import LimiterWindows
             return LimiterWindows(**arguments)  # type: ignore
 
