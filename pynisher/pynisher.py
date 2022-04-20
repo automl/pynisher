@@ -65,6 +65,18 @@ class Pynisher(ContextDecorator):
             x, unit = memory
             memory = int(memconvert(x, frm=unit, to="B"))
 
+        if memory is not None and memory <= 1:
+            raise ValueError(f"`memory` ({memory}) must be int >= 1")
+
+        if cpu_time is not None and cpu_time <= 1:
+            raise ValueError(f"`cpu_time` ({cpu_time}) must be int >= 1")
+
+        if wall_time is not None and wall_time <= 1:
+            raise ValueError(f"`wall_time` ({wall_time}) must be int >= 1")
+
+        if grace_period <= 1:
+            raise ValueError(f"`grace_period` ({grace_period}) must be int >= 1")
+
         self.func = func
         self.name = name
         self.cpu_time = cpu_time
