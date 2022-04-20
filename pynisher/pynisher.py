@@ -12,7 +12,7 @@ from pynisher.util import memconvert
 
 
 class Pynisher(ContextDecorator):
-    """TODO add some documentation on class"""
+    """Restrict a function's resources"""
 
     def __init__(
         self,

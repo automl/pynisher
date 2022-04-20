@@ -139,15 +139,15 @@ class Limiter(ABC):
         #
         if system_name == "Linux":
             from pynisher.limiters.linux import LimiterLinux
-            return LimiterLinux(**arguments)
+            return LimiterLinux(**arguments)  # type: ignore
 
         elif system_name == "Darwin":
             from pynisher.limiters.mac import LimiterDarwin
-            return LimiterDarwin(**arguments)
+            return LimiterDarwin(**arguments)  # type: ignore
 
         elif system_name == "Windows":
             from pynisher.limiters.windows import LimiterWindows
-            return LimiterWindows(**arguments)
+            return LimiterWindows(**arguments)  # type: ignore
 
         else:
             raise NotImplementedError(

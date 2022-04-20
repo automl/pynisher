@@ -18,7 +18,7 @@ def memconvert(x: float, *, frm: str = "B", to: str = "B") -> float:
     x : float
         The memory amount
 
-    unit : "B" | "KB" | "MB" | "GB" = "B"
+    frm : "B" | "KB" | "MB" | "GB" = "B"
         What unit it is in
 
     to :  "B" | "KB" | "MB" | "GB" = "B"

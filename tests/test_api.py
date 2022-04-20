@@ -7,10 +7,16 @@ import pytest
 
 
 def subfunction() -> int:
+    """Small test function which returns the id"""
     return os.getpid()
 
 
 def test_as_contextmanager() -> None:
+    """
+    Expects
+    -------
+    * Should be able to use as a context manager
+    """
     with Pynisher(subfunction) as restricted_func:
         other_process_id = restricted_func()
 
@@ -19,6 +25,11 @@ def test_as_contextmanager() -> None:
 
 
 def test_call() -> None:
+    """
+    Expects
+    -------
+    * Should be able to call the restricted function
+    """
     restricted_func = Pynisher(subfunction)
 
     this_process_id = os.getpid()
@@ -28,7 +39,11 @@ def test_call() -> None:
 
 
 def test_run() -> None:
-    """Checks with explicit"""
+    """
+    Expects
+    -------
+    * Should be able to explicitly call run on the restricted function
+    """
     pynisher = Pynisher(subfunction)
 
     this_process_id = os.getpid()
@@ -37,8 +52,11 @@ def test_run() -> None:
 
 
 def test_limit_gives_helpful_err_message_with_misuse() -> None:
-    """NOTE: Not advised usage pattern"""
-
+    """
+    Expects
+    -------
+    * Should raise an error if decorator is used without arguments
+    """
     with pytest.raises(ValueError, match=r"Please pass arguments to decorator `limit`"):
 
         @limit  # type: ignore
@@ -47,8 +65,11 @@ def test_limit_gives_helpful_err_message_with_misuse() -> None:
 
 
 def test_limit_as_decorator() -> None:
-    """NOTE: Not advised usage pattern"""
-
+    """
+    Expects
+    -------
+    * Should be able to decorate function
+    """
     @limit(name="hello")
     def f() -> int:
         return subfunction()

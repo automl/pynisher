@@ -12,6 +12,8 @@ incase of specific modules or changes needed.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import resource
 import signal
 
@@ -21,7 +23,7 @@ from pynisher.limiters.limiter import Limiter
 
 class LimiterLinux(Limiter):
     @staticmethod
-    def _handler(signum: signal.Signals, frame: signal.FrameType | None) -> None:
+    def _handler(signum: int, frame: signal.FrameType | None) -> Any:
         # SIGXCPU: cpu_time `setrlimit(RLIMIT_CPU, (soft, hard))`
         #
         #   Sent when process reaches `soft` limit of, then once a second until `hard`
