@@ -57,7 +57,7 @@ class LimiterMac(Limiter):
         time was exceeded. This lets us give back the traceback.
 
         We can't limit using resource.setrlimit as it seems that None of the
-        RLIMIT_X's are available. This we debugged by using 
+        RLIMIT_X's are available. This we debugged by using
         `import psutil; print(dir(psutil))` in which a MAC system did not have
         any `RLIMIT_X` attributes while a Linux system did.
 
@@ -84,6 +84,11 @@ class LimiterMac(Limiter):
             The amount of extra time given to the process before a SIGKILL
             is sent.
         """
+        # It seems like everything below 1 fails.
+        if cpu_time < 1:
+            cpu_time = 1
+
+        # No extra grace periods necessary for mac 😎
         soft = cpu_time
         hard = cpu_time + grace_period
 
