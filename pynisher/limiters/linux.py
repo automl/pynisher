@@ -16,7 +16,6 @@ from typing import Any
 
 import resource
 import signal
-import warnings
 
 from pynisher.exceptions import CpuTimeoutException, SignalException, TimeoutException
 from pynisher.limiters.limiter import Limiter
