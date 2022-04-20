@@ -4,11 +4,13 @@
 [tool.pytest.ini_options]
 testpaths = ["test"]
 minversion = "3.7"
-#addopts = "--cov=pynisher"
+addopts = "--cov=pynisher -sv"
 
 [tool.coverage.run]
 branch = true
 context = "pynisher"
+parallel = true
+concurrency = ["multiprocessing"]
 
 [tool.coverage.report]
 show_missing = true
@@ -91,5 +93,5 @@ module = [
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["test.*", "tests.*"]
+module = ["test.*"]
 disallow_untyped_decorators = false # Test decorators are not properly typed

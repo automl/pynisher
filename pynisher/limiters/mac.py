@@ -118,7 +118,9 @@ class LimiterMac(Limiter):
             Whether it was successful
         """
         try:
-            resource.setrlimit(resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+            resource.setrlimit(
+                resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
+            )
             return True
         except Exception:
             return False

@@ -12,7 +12,6 @@ if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
 
 def usememory(x: int) -> None:
     """Use a certain amount of memory in MB"""
-    print(Monitor().memory("MB"))
     bytearray(int(x))
     return
 

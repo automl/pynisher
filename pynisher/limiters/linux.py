@@ -100,7 +100,9 @@ class LimiterLinux(Limiter):
 
     def _try_remove_memory_limit(self) -> bool:
         """Remove memory limit if it can"""
-        resource.setrlimit(resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+        resource.setrlimit(
+            resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
+        )
         return True
 
     def _debug_memory(self) -> str:
