@@ -93,7 +93,7 @@ class LimiterMac(Limiter):
         hard = cpu_time + grace_period
 
         resource.setrlimit(resource.RLIMIT_CPU, (soft, hard))
-        signal.signal(signal.SIGXCPU, LimiterDarwin._handler)
+        signal.signal(signal.SIGXCPU, LimiterMac._handler)
 
     def limit_wall_time(self, wall_time: int) -> None:
         """Limit the wall time for this process
@@ -106,11 +106,5 @@ class LimiterMac(Limiter):
         wall_time : int
             The amount of time to limit to in seconds
         """
-        signal.signal(signal.SIGALRM, LimiterDarwin._handler)
+        signal.signal(signal.SIGALRM, LimiterMac._handler)
         signal.alarm(wall_time)
-
-
-class LimiterDarwin(LimiterMac):
-    """Incase we need something specific for DARWIN"""
-
-    pass
