@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import psutil
 from psutil import Process
 
 _unit_table = {
@@ -76,3 +77,24 @@ class Monitor:
 
         usage = getattr(mem, kind)
         return memconvert(usage, frm="B", to=units)
+
+    def memlimit(self, units: str = "B") -> tuple[float, float]:
+        """
+        Parameters
+        ----------
+        units : "B" | "KB" | "MB" | "GB" = "B"
+            Units to measure in
+
+        Returns
+        -------
+        float
+            The memory limit.
+            Returns (-2, -2) if RLIMIT_AS doesn't work
+        """
+        if hasattr(psutil, "RLIMIT_AS"):
+            limits = self.process.rlimit(psutil.RLIMIT_AS)
+            if units != "B":
+                limits = tuple(memconvert(x, frm="B", to=units) for x in limits)
+            return limits
+        else:
+            return (-2, -2)
