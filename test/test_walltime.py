@@ -23,6 +23,7 @@ def test_fail(wall_time: int) -> None:
         with Pynisher(func, wall_time=wall_time) as restricted_func:
             restricted_func(sleep=wall_time * 2)
 
+
 def test_success() -> None:
     """
     Expects

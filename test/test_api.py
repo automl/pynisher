@@ -89,7 +89,8 @@ def test_bad_func_arg() -> None:
     * Should raise an Error about a none callable bad memory limit
     """
     with pytest.raises(ValueError, match=r"func"):
-        rf = Pynisher(func=None)
+        Pynisher(func=None)  # type: ignore
+
 
 @parametrize("memory", [-1, 0])
 def test_bad_memory_arg(memory: int) -> None:
@@ -98,11 +99,12 @@ def test_bad_memory_arg(memory: int) -> None:
     -------
     * Should raise an Error about a bad memory limit
     """
+
     def _f() -> None:
         pass
 
     with pytest.raises(ValueError, match=r"memory"):
-        rf = Pynisher(_f, memory=memory)
+        Pynisher(_f, memory=memory)
 
 
 @parametrize("cpu_time", [-1, 0])
@@ -112,11 +114,13 @@ def test_bad_cpu_time_arg(cpu_time: int) -> None:
     -------
     * Should raise an Error about a bad cpu_time limit
     """
+
     def _f() -> None:
         pass
 
     with pytest.raises(ValueError, match=r"cpu_time"):
-        rf = Pynisher(_f, cpu_time=cpu_time)
+        Pynisher(_f, cpu_time=cpu_time)
+
 
 @parametrize("wall_time", [-1, 0])
 def test_bad_wall_time_arg(wall_time: int) -> None:
@@ -125,11 +129,12 @@ def test_bad_wall_time_arg(wall_time: int) -> None:
     -------
     * Should raise an Error about a bad wall_time limit
     """
+
     def _f() -> None:
         pass
 
     with pytest.raises(ValueError, match=r"wall_time"):
-        rf = Pynisher(_f, wall_time=wall_time)
+        Pynisher(_f, wall_time=wall_time)
 
 
 @parametrize("grace_period", [-1, 0])
@@ -139,11 +144,12 @@ def test_bad_grace_period_arg(grace_period: int) -> None:
     -------
     * Should raise an Error about a bad grace_period limit
     """
+
     def _f() -> None:
         pass
 
     with pytest.raises(ValueError, match=r"grace_period"):
-        rf = Pynisher(_f, grace_period=grace_period)
+        Pynisher(_f, grace_period=grace_period)
 
 
 def test_bad_context_arg() -> None:
@@ -152,8 +158,9 @@ def test_bad_context_arg() -> None:
     -------
     * Should raise an Error about a bad grace_period limit
     """
+
     def _f() -> None:
         pass
 
     with pytest.raises(ValueError, match=r"context"):
-        rf = Pynisher(_f, context="bad arg")
+        Pynisher(_f, context="bad arg")

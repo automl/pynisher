@@ -1,7 +1,7 @@
 import os
 import sys
-from setuptools import setup
 
+from setuptools import setup
 
 # Raise warnings if system version is not greater than 3.7
 if not sys.version_info >= (3, 7):
@@ -29,22 +29,22 @@ setup(
     version="0.7.0",
     packages=["pynisher"],
     install_requires=install_reqs,
-    extras_requires={
+    extras_require={
         "test": [
             "pytest",
             "pre-commit",
             "pytest-cov",
             "pytest-forked",
-            "pydocstyle[toml]"
+            "pydocstyle[toml]",
             "isort",
             "black",
             "flake8",
             "mypy",
             "scikit-learn",
         ],
-        "docs": ["sphinx"],
+        "docs": "sphinx",
     },
-    author="Stefan Falkner, Christina Hernandez-Wunsch, Samuel Mueller, Matthias Feurer, Francisco Rivera, Eddi Bergman and Rene Sass",
+    author="Stefan Falkner, Christina Hernandez-Wunsch, Samuel Mueller, Matthias Feurer, Francisco Rivera, Eddie Bergman and Rene Sass",
     author_email="feurerm@informatik.uni-freiburg.de",
     description="A small Python library to limit the resources used by a function by executing it inside a subprocess.",
     long_description=long_description,

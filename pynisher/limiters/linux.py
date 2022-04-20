@@ -23,7 +23,7 @@ from pynisher.limiters.limiter import Limiter
 
 class LimiterLinux(Limiter):
     @staticmethod
-    def _handler(signum: int, frame: signal.FrameType | None) -> Any:
+    def _handler(signum: int, frame: Any | None) -> Any:
         # SIGXCPU: cpu_time `setrlimit(RLIMIT_CPU, (soft, hard))`
         #
         #   Sent when process reaches `soft` limit of, then once a second until `hard`
