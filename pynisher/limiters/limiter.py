@@ -74,7 +74,7 @@ class Limiter(ABC):
                 self.limit_memory(self.memory)
 
             if self.cpu_time is not None:
-                self.limit_cpu_time(self.cpu_time)
+                self.limit_cpu_time(self.cpu_time, grace_period=self.grace_period)
 
             if self.wall_time is not None:
                 self.limit_wall_time(self.wall_time)
