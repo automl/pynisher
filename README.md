@@ -54,6 +54,20 @@ if (response := notify_remote_server()):
 # ...
 ```
 
+You can safely raise errors from inside your function and the same kind of error will be reraised
+with a traceback.
+```python
+def f():
+    raise MyCustomException()
+
+rf = Pynisher(f)
+
+try:
+    rf()
+except MyCustomException as e:
+    ... # do what you need
+```
+
 ## Details
 Pynisher works by running your function inside of a subprocess.
 Once in the subprocess, the resources will be limited and the function ran!
