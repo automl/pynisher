@@ -5,10 +5,26 @@ import time
 import pytest
 
 
-def func(sleep: float) -> bool:
-    """Sleeps for `sleep` second"""
-    time.sleep(sleep)
-    return True
+def func(execution_time: float) -> float:
+    """
+    Sleeps for `sleep` second.
+
+    Warning
+    -------
+    print statements do not count towards the time limit.
+    """
+    start = time.perf_counter()
+    while True:
+        duration = time.perf_counter() - start
+        if duration > execution_time:
+            break
+
+    return duration
+
+
+def test_success() -> None:
+    with Pynisher(func, cpu_time=3) as restricted_func:
+        restricted_func(2)
 
 
 def test_fail() -> None:
@@ -20,19 +36,4 @@ def test_fail() -> None:
     """
     with pytest.raises(CpuTimeoutException):
         with Pynisher(func, cpu_time=1) as restricted_func:
-            completed = False
-            completed = restricted_func(sleep=3)
-
-    assert not completed
-
-
-def test_success() -> None:
-    """
-    Expects
-    -------
-    * The Pynisher process should complete successfully without an issue
-    """
-    with Pynisher(func, cpu_time=5) as restricted_func:
-        completed = restricted_func(sleep=1)
-
-    assert completed is True
+            restricted_func(2)
