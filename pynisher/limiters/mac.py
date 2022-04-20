@@ -61,12 +61,17 @@ class LimiterMac(Limiter):
         `import psutil; print(dir(psutil))` in which a MAC system did not have
         any `RLIMIT_X` attributes while a Linux system did.
 
+        We still however try this but it's unlikely to work
+
         Parameters
         ----------
         memory : int
             The memory limit in bytes
         """
-        warnings.warn("Limiting memory is not supported on Darwin.")
+        try:
+            resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
+        except Exception:
+            warnings.warn("Limiting memory is not supported on your system.")
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
