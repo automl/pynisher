@@ -9,6 +9,8 @@ import sys
 import traceback
 from multiprocessing.connection import Connection
 
+from pynisher.util import Monitor
+
 
 class Limiter(ABC):
     """Defines how to limit resources for a given system."""
@@ -71,6 +73,17 @@ class Limiter(ABC):
         try:
             # Go through each limitation we can apply, relying
             if self.memory is not None:
+
+                # We should probably warn if we exceed the memory usage before
+                # any limitation is set
+                memusage = Monitor().memory("B")
+                if memusage >= memory:
+                    warnings.warn(
+                        f"Current memory usage in new process is {memusage}B but "
+                        f" setting limit to {self.memory}B. Likely to fail, try"
+                        f" increasing the memory limit"
+                    )
+
                 self.limit_memory(self.memory)
 
             if self.cpu_time is not None:
