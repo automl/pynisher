@@ -33,14 +33,14 @@ class Pynisher(ContextDecorator):
             The function to limit and call
 
         name : str | None
-            A name to give the process that gets created, defaults to whatever multiprocessing.Process
-            defaults to.
+            A name to give the process that gets created, defaults to whatever
+            multiprocessing.Process defaults to.
 
         memory : int | tuple[int, str] | None = None
-            The amount of memory to limit by. If `tuple`, specify with units like (4, "MB").
+            The amount of memory to limit by. If `tuple`, specify units with (4, "MB").
             Possible units are "B", "KB", "MB", "GB".
 
-            Processes are given some dedicated size before any limitation can take place.
+            Processes take up some space before any limitation can take place.
             These will run fine until a new allocation takes place.
             This means a process can technically run in a limit of 1 Byte, up until the
             point it tries to allocate anything.
@@ -52,7 +52,7 @@ class Pynisher(ContextDecorator):
             The amount of total wall time in seconds to limit to
 
         grace_period : int = 1
-            Buffer time in seconds to give to a process to end when given a signal to end.
+            Buffer time in seconds while limiting CPU time.
 
         context : str = "fork" | "spawn" | "forkserver" | None
             The context to use with multiprocessing.get_context()
@@ -60,7 +60,7 @@ class Pynisher(ContextDecorator):
 
         raises : bool = True
             Whether any error from the subprocess should filter up and be raised.
-        """
+        """  # noqa
         if not callable(func):
             raise ValueError(f"`func` ({func}) must be callable")
 
@@ -148,7 +148,7 @@ class Pynisher(ContextDecorator):
         # the result back.
         recieve_pipe, send_pipe = self.context.Pipe(duplex=False)
 
-        # The limiter is what is in charge of limiting resources once inside the subprocess
+        # The limiter is in charge of limiting resources once inside the subprocess
         # It gets the `recieve_pipe` through which it it should `output` it's results to
         limiter = Limiter.create(
             func=self.func,
@@ -159,8 +159,8 @@ class Pynisher(ContextDecorator):
             grace_period=self.grace_period,
         )
 
-        # We now create the subprocess and let it know that it should call the limiter's __call__
-        # with the args and kwargs for the function being limited
+        # We now create the subprocess and let it know that it should call the limiter's
+        # __call__ with the args and kwargs for the function being limited
         subprocess = self.context.Process(
             target=limiter.__call__,
             args=args,
@@ -223,7 +223,7 @@ class Pynisher(ContextDecorator):
 # NOTE: Can only use typevar on decorator
 #
 #   Since the typevar only exist in the indentation context, we can use it here for
-#   the full function scope to annotate the return type. To do so for the class Pynisher,
+#   the full function scope to annotate the return type. To do so for Pynisher,
 #   we would have to make it generic, probably not worth the extra complexity
 #
 T = TypeVar("T")
@@ -231,10 +231,10 @@ T = TypeVar("T")
 
 # NOTE: Simpler solution?
 #
-#   There might be a simpler solution then redfining a function, e.g. `limit = Pynisher` but
-#   it gets complicated as we need something like `@limit(memory=...)` but that won't work
-#   as the first arg to `Pynisher.__init__` should be the function itself. For now this should
-#   work
+#   There might be a simpler solution then redfining a function, e.g. `limit = Pynisher`
+#   but it gets complicated as we need something like `@limit(memory=...)` but that
+#   won't work as the first arg to `Pynisher.__init__` should be the function itself.
+#   For now this should work
 #
 def limit(
     name: str | None = None,
@@ -285,7 +285,7 @@ def limit(
 
     raises : bool = True
         Whether any error from the subprocess should filter up and be raised.
-    """
+    """  # noqa
     # Incase the first argument is a function, we assume it was missued
     #
     # @limit

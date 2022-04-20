@@ -37,8 +37,8 @@ class LimiterLinux(Limiter):
         #   When the alarm uses `wall_time`, SIGALARM will be sent.
         #   It has no default action
         elif signum == signal.SIGALRM:
-            # SIGALRM is sent to process when the specified time limit to an alarm function elapses
-            # (when real or clock time elapses)
+            # SIGALRM is sent to process when the specified time limit to an alarm
+            # function elapses (when real or clock time elapses)
             raise TimeoutException
 
         # UNKNOWN

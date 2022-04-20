@@ -32,7 +32,7 @@ class Limiter(ABC):
             The function to be limited
 
         output : Connection
-            The output multiprocessing.Connection object to pass the results back through
+            The output multiprocessing.Connection object to pass the results back
 
         memory : int | None = None
             The memory in bytes to allocate
@@ -56,11 +56,10 @@ class Limiter(ABC):
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         """Set process limits and then call the function with the given arguments.
 
-        Will send it's output to `self.output(result: Any | None, exception: Exception | None)`.
-
         Note
         ----
-        This should usually not be called by the end user, it's main use is in Pynisher::run().
+        This should usually not be called by the end user, it's main use is in
+        Pynisher::run().
 
         Parameters
         ----------
@@ -135,8 +134,8 @@ class Limiter(ABC):
         """For full documentation, see __init__."""
         # NOTE: __init__ param duplication
         #
-        #   I'm not delighted by the duplication of the __init__ params but this keeps things
-        #   typesafe and referencable in case we need to validate
+        #   I'm not delighted by the duplication of the __init__ params but this keeps
+        #   things typesafe and referencable in case we need to validate
         arguments = {
             "func": func,
             "output": output,
@@ -146,7 +145,7 @@ class Limiter(ABC):
             "grace_period": grace_period,
         }
 
-        # There is probably a lot more things to check but for now this covers our use case
+        # There is probably a lot more identifiers but for now this covers our use case
         system_name = platform.system().lower()
 
         # NOTE: Imports inside if statements
@@ -155,9 +154,9 @@ class Limiter(ABC):
         #   to inherit Limiter from this file, while this file needs to import them too,
         #   creating a circular dependancy... unless they're imported later.
         #
-        #   Secondly, different systems will have different modules available. For example,
-        #   the `resources` module is not avialable on Windows and so importing that would
-        #   cause issues.
+        #   Secondly, different systems will have different modules available.
+        #   For example, the `resources` module is not avialable on Windows and so
+        #   importing that would cause issues.
         #
         if system_name == "linux":
             from pynisher.limiters.linux import LimiterLinux
