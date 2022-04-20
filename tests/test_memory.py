@@ -52,20 +52,3 @@ def test_success(limit: int) -> None:
 
     allocation_bytes = memconvert(allocate, frm="MB", to="B")
     restricted_func(allocation_bytes)
-
-
-if __name__ == "__main__":
-
-    def f(x):
-        """Allocates memory"""
-        print("limit (MB) = ", Monitor().memlimit(units="MB"))
-        print("usage before (MB) = ", Monitor().memory(units="MB"))
-        print("Allocating (MB) = ", memconvert(x, to="MB"))
-        z = bytearray(int(x))
-        print("usage after (MB) = ", Monitor().memory(units="MB"))
-
-    limit = 1000
-    with Pynisher(f, memory=(limit, "MB")) as rf:
-        allocate = limit / 2
-        allocation_bytes = memconvert(allocate, frm="MB", to="B")
-        rf(allocation_bytes)

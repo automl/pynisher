@@ -68,7 +68,7 @@ class LimiterMac(Limiter):
         """
         warnings.warn("Limiting memory is not supported on Darwin.")
 
-    def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
+    def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
 
         A SIGXCPU will be sent to the `_handler` once the `soft` limit
@@ -80,7 +80,7 @@ class LimiterMac(Limiter):
         cpu_time : int
             The amount of time in seconds
 
-        grace_period : int = 0
+        grace_period : int = 1
             The amount of extra time given to the process before a SIGKILL
             is sent.
         """

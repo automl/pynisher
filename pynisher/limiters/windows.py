@@ -6,7 +6,7 @@ class LimiterWindows(Limiter):
         """Limit's the memory of this process."""
         raise NotImplementedError()
 
-    def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
+    def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit's the cpu time of this process."""
         raise NotImplementedError()
 

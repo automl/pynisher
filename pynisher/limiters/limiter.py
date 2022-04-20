@@ -20,7 +20,7 @@ class Limiter(ABC):
         memory: int | None = None,
         cpu_time: int | None = None,
         wall_time: int | None = None,
-        grace_period: int = 0,
+        grace_period: int = 1,
     ) -> None:
         """
         Parameters
@@ -40,7 +40,7 @@ class Limiter(ABC):
         wall_time : int | None = None
             The wall time to allocate
 
-        grace_period : int = 0
+        grace_period : int = 1
             The grace period to give for a process to shutdown once signalled
         """
         self.func = func
@@ -108,7 +108,7 @@ class Limiter(ABC):
         memory: int | None = None,
         cpu_time: int | None = None,
         wall_time: int | None = None,
-        grace_period: int = 0,
+        grace_period: int = 1,
     ) -> Limiter:
         """For full documentation, see __init__."""
         # NOTE: __init__ param duplication
@@ -160,7 +160,7 @@ class Limiter(ABC):
         ...
 
     @abstractmethod
-    def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
+    def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit's the cpu time of this process."""
         ...
 

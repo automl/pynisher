@@ -1,9 +1,9 @@
 """
-For documentation on `setrlimit` and how to limit resources for MAC
+For documentation on `setrlimit` and how to limit resources for Linux
 ** `setrlimit` **
 https://man7.org/linux/man-pages/man2/setrlimit.2.html
 
-For documentation on MAC specific signal alarms:
+For documentation on Linux specific signal alarms:
 ** `signals` **
 https://man7.org/linux/man-pages/man7/signal.7.html
 
@@ -62,7 +62,7 @@ class LimiterLinux(Limiter):
         """
         resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
 
-    def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
+    def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
 
         A SIGXCPU will be sent to the `_handler` once the `soft` limit
@@ -74,7 +74,7 @@ class LimiterLinux(Limiter):
         cpu_time : int
             The amount of time in seconds
 
-        grace_period : int = 0
+        grace_period : int = 1
             The amount of extra time given to the process before a SIGKILL
             is sent.
         """

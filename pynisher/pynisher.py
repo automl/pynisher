@@ -22,7 +22,7 @@ class Pynisher(ContextDecorator):
         memory: int | tuple[int, str] | None = None,
         cpu_time: int | None = None,
         wall_time: int | None = None,
-        grace_period: int = 0,
+        grace_period: int = 1,
         context: str = "fork",
         raises: bool = True,
     ) -> None:
@@ -51,7 +51,7 @@ class Pynisher(ContextDecorator):
         wall_time : int | None = None
             The amount of total wall time to limit to
 
-        grace_period : int = 0
+        grace_period : int = 1
             Buffer time to give to a process to end when given a signal to end.
 
         context : str = "fork" | "spawn" | "forkserver" | None
@@ -212,7 +212,7 @@ def limit(
     memory: int | tuple[int, str] | None = None,
     cpu_time: int | None = None,
     wall_time: int | None = None,
-    grace_period: int = 0,
+    grace_period: int = 1,
     context: str = "fork",
     raises: bool = True,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:  # Lol ((...) -> T) -> ((...) -> T)
@@ -247,7 +247,7 @@ def limit(
     wall_time : int | None = None
         The amount of total wall time to limit to
 
-    grace_period : int = 0
+    grace_period : int = 1
         Buffer time to give to a process to end when given a signal to end.
 
     context : str = "fork" | "spawn" | "forkserver" | None
