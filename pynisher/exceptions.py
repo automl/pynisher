@@ -1,10 +1,10 @@
-class PynisherExcpetion(Exception):
+class PynisherException(Exception):
     """Base class for any Pynisher related exceptions"""
 
     pass
 
 
-class TimeoutException(PynisherExcpetion):
+class TimeoutException(PynisherException):
     """Base class for Timeout based errors"""
 
     pass
@@ -22,7 +22,7 @@ class WallTimeoutException(TimeoutException):
     pass
 
 
-class MemoryLimitException(PynisherExcpetion, MemoryError):
+class MemoryLimitException(PynisherException, MemoryError):
     """Exception when hitting the Memory Limit."""
 
     pass
