@@ -46,13 +46,13 @@ class Pynisher(ContextDecorator):
             point it tries to allocate anything.
 
         cpu_time : int | None = None
-            The amount of cpu time in second to limit to
+            The amount of cpu time in seconds to limit to
 
         wall_time : int | None = None
-            The amount of total wall time to limit to
+            The amount of total wall time in seconds to limit to
 
         grace_period : int = 1
-            Buffer time to give to a process to end when given a signal to end.
+            Buffer time in seconds to give to a process to end when given a signal to end.
 
         context : str = "fork" | "spawn" | "forkserver" | None
             The context to use with multiprocessing.get_context()
@@ -261,13 +261,13 @@ def limit(
         point it tries to allocate anything.
 
     cpu_time : int | None = None
-        The amount of cpu time in second to limit to
+        The amount of cpu time in seconds to limit to
 
     wall_time : int | None = None
-        The amount of total wall time to limit to
+        The amount of total wall time in seconds to limit to
 
     grace_period : int = 1
-        Buffer time to give to a process to end when given a signal to end.
+        Buffer time in seconds to give to a process to end when given a signal to end.
 
     context : str = "fork" | "spawn" | "forkserver" | None
         The context to use with multiprocessing.get_context()

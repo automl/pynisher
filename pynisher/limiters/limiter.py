@@ -32,16 +32,16 @@ class Limiter(ABC):
             The output multiprocessing.Connection object to pass the results back through
 
         memory : int | None = None
-            The memory to allocate
+            The memory in bytes to allocate
 
         cpu_time : int | None = None
-            The cput time to allocate
+            The cpu time in seconds to allocate
 
         wall_time : int | None = None
-            The wall time to allocate
+            The wall time in seconds to allocate
 
         grace_period : int = 1
-            The grace period to give for a process to shutdown once signalled
+            The grace period in seconds to give for a process to shutdown once signalled
         """
         self.func = func
         self.output = output
