@@ -6,9 +6,9 @@ import multiprocessing
 from contextlib import ContextDecorator
 from functools import wraps
 
+from pynisher.exceptions import MemoryLimitException
 from pynisher.limiters import Limiter
 from pynisher.util import memconvert
-from pynisher.exceptions import MemoryLimitException
 
 
 class Pynisher(ContextDecorator):

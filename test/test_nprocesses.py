@@ -1,5 +1,6 @@
-from pynisher import Pynisher
 import time
+
+from pynisher import Pynisher
 
 
 def func(number: int) -> int:

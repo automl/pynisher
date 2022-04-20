@@ -1,6 +1,6 @@
-from pynisher.limiters.limiter import Limiter
-
 import warnings
+
+from pynisher.limiters.limiter import Limiter
 
 
 class LimiterWindows(Limiter):

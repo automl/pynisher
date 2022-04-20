@@ -1,8 +1,8 @@
 import sys
 
 from pynisher import Pynisher
-from pynisher.util import memconvert, Monitor
 from pynisher.exceptions import MemoryLimitException
+from pynisher.util import Monitor, memconvert
 
 import pytest
 

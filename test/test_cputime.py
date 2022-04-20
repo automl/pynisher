@@ -1,6 +1,7 @@
+import time
+
 from pynisher import Pynisher
 from pynisher.exceptions import CpuTimeoutException
-import time
 
 import pytest
 

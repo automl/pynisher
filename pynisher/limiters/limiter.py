@@ -7,8 +7,8 @@ from typing import Any, Callable
 import platform
 import sys
 import traceback
-from multiprocessing.connection import Connection
 import warnings
+from multiprocessing.connection import Connection
 
 from pynisher.util import Monitor
 
