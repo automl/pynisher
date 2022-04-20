@@ -99,19 +99,29 @@ context: "fork" | "spawn" | "forkserver" | None = "fork"
 For simplicity, pynisher will no longer try to control `stdout`, `stderr`, instead end users
 can use the builtins `redirect_stdout` and `redirect_stderr` of Python to send things as needed.
 
+Pynisher issues warnings through `stderr`.
+
 ```python
 from contextlib import redirect_stdout, redirect_stderr
-import os
+
+# Capture warnings in a string
+from io import StringIO
+stderr = StringIO()
+with redirect_stderr(stderr):
+    restricted_func()
+
+stderr_output = stderr.getvalue()
 
 # Send everything to a files
-with open("stdout.txt", "w") as out, open("stdout.txt", "w") as err:
+with open("stdout.txt", "w") as out, open("stderr.txt", "w") as err:
     with redirect_stdout(out), redirect_stderr(err):
-        run_restricted_function()
+        restricted_function()
 
 # Just send everything to the void
+import os
 with open(os.devnull, "w") as devnull:
     with redirect_stdout(devnull), redirect_stderr(devnull):
-        run_restricted_function()
+        restricted_function()
 ```
 
 ## Pynisher and Multithreading
