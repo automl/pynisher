@@ -16,6 +16,7 @@ from typing import Any
 
 import resource
 import signal
+import warnings
 
 from pynisher.exceptions import CpuTimeoutException, SignalException, TimeoutException
 from pynisher.limiters.limiter import Limiter
@@ -55,13 +56,17 @@ class LimiterMac(Limiter):
         we instead catch a python `MemoryError` as indication that memory
         time was exceeded. This lets us give back the traceback.
 
+        We can't limit using resource.setrlimit as it seems that None of the
+        RLIMIT_X's are available. This we debugged by using 
+        `import psutil; print(dir(psutil))` in which a MAC system did not have
+        any `RLIMIT_X` attributes while a Linux system did.
+
         Parameters
         ----------
         memory : int
             The memory limit in bytes
         """
-        # Convert megabyte to byte
-        resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
+        warnings.warn("Limiting memory is not supported on Darwin.")
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 0) -> None:
         """Limit the cpu time for this process.
@@ -83,7 +88,7 @@ class LimiterMac(Limiter):
         hard = cpu_time + grace_period
 
         resource.setrlimit(resource.RLIMIT_CPU, (soft, hard))
-        signal.signal(signal.SIGALRM, LimiterDarwin._handler)
+        signal.signal(signal.SIGXCPU, LimiterDarwin._handler)
 
     def limit_wall_time(self, wall_time: int) -> None:
         """Limit the wall time for this process

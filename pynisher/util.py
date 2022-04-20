@@ -44,7 +44,6 @@ def memconvert(x: float, *, frm: str = "B", to: str = "B") -> float:
 
 
 class Monitor:
-
     def __init__(self, pid: int | None = None):
         """
         Parameters
@@ -78,8 +77,14 @@ class Monitor:
         usage = getattr(mem, kind)
         return memconvert(usage, frm="B", to=units)
 
-    def memlimit(self, units: str = "B") -> tuple[float, float]:
+    def memlimit(self, units: str = "B") -> tuple[float, float] | None:
         """
+
+        We can't limit using resource.setrlimit as it seems that None of the
+        RLIMIT_X's are available. This we debugged by using
+        `import psutil; print(dir(psutil))` in which a MAC system did not have
+        any `RLIMIT_X` attributes while a Linux system did.
+
         Parameters
         ----------
         units : "B" | "KB" | "MB" | "GB" = "B"
@@ -87,9 +92,9 @@ class Monitor:
 
         Returns
         -------
-        float
+        float | None
             The memory limit.
-            Returns (-2, -2) if RLIMIT_AS doesn't work
+            Returns None if it can't be gotten
         """
         if hasattr(psutil, "RLIMIT_AS"):
             limits = self.process.rlimit(psutil.RLIMIT_AS)
@@ -97,4 +102,4 @@ class Monitor:
                 limits = tuple(memconvert(x, frm="B", to=units) for x in limits)
             return limits
         else:
-            return (-2, -2)
+            return None

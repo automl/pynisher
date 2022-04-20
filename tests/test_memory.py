@@ -1,3 +1,5 @@
+import sys
+
 from pynisher import Pynisher
 from pynisher.util import memconvert, Monitor
 from pynisher.exceptions import MemorylimitException
@@ -12,6 +14,7 @@ def usememory(x: int) -> None:
     return
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="Can't limit memory on Darwin")
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])
 def test_fail(limit: int) -> None:
     """Using more than the allocated memory should raise an Error"""
@@ -24,6 +27,7 @@ def test_fail(limit: int) -> None:
         restricted_func(allocation_bytes)
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="Can't limit memory on Darwin")
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])
 def test_success(limit: int) -> None:
     """Using less than the allocated memory should be fine
