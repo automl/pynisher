@@ -79,10 +79,6 @@ class LimiterLinux(Limiter):
             The amount of extra time given to the process before a SIGKILL
             is sent.
         """
-        if grace_period < 1:
-            warnings.warn(f"grace_period ({grace_period}) set to 1, must be >= 1 on Linux")
-            grace_period = 1
-
         soft = cpu_time
         hard = cpu_time + grace_period
 

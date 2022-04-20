@@ -89,12 +89,6 @@ class LimiterMac(Limiter):
             The amount of extra time given to the process before a SIGKILL
             is sent.
         """
-        # It seems like everything below 1 fails.
-        if cpu_time < 1:
-            warnings.warn(f"cpu_time ({cpu_time}) set to 1, must be >= 1 on Mac")
-            cpu_time = 1
-
-        # No extra grace periods necessary for mac 😎
         soft = cpu_time
         hard = cpu_time + grace_period
 
