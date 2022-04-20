@@ -143,7 +143,7 @@ class Limiter(ABC):
 
         elif system_name == "darwin":
             from pynisher.limiters.mac import LimiterMac
-            return LimiterDarwin(**arguments)  # type: ignore
+            return LimiterMac(**arguments)  # type: ignore
 
         elif system_name == "windows":
             from pynisher.limiters.windows import LimiterWindows
