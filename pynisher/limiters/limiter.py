@@ -10,6 +10,7 @@ import traceback
 from multiprocessing.connection import Connection
 
 
+
 class Limiter(ABC):
     """Defines how to limit resources for a given system."""
 
@@ -83,20 +84,28 @@ class Limiter(ABC):
             # no error or trace
             result = self.func(*args, **kwargs)
             error = None
-
-            self.output.send((result, error))
+            self.output.send((result, None))
 
         except Exception as e:
-            # If for whatever reason, we can't send something or the sending fails, we catch
-            # the error and try to send that. If that also fails, there's not much we can do.
-            result = None
+
+            # Something went wrong, we catch the error and try to send that.
             str_traceback = "".join(traceback.format_exception(*sys.exc_info()))
             error = (e, str_traceback)  # The traceback is lost if not stored
 
-            self.output.send((result, error))
+            try:
+                self.output.send((None, error))
+            except MemoryError:
+                # `send` will also allocate memory and can lead to corrupt Connection
+                # objects. This causes the recieve to hang on `recv`, causing
+                # everything to lock. We try to remove the memory limit and then
+                # try to send again.
+                success = self._try_remove_memory_limit()
+                if success:
+                    self.output.send((None, error))
+                else:
+                    self.output.send(None)
 
         finally:
-            # We are done
             self.output.close()
 
         return
@@ -167,4 +176,15 @@ class Limiter(ABC):
     @abstractmethod
     def limit_wall_time(self, wall_time: int) -> None:
         """Limit's the wall time of this process."""
+        ...
+
+    @abstractmethod
+    def _try_remove_memory_limit(self) -> bool:
+        """Remove the memory limit if it can
+
+        Returns
+        -------
+        success: bool
+            Whether it was successful or not
+        """
         ...

@@ -60,7 +60,7 @@ class LimiterLinux(Limiter):
         memory : int
             The memory limit in bytes
         """
-        resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
+        resource.setrlimit(resource.RLIMIT_AS, (memory, resource.RLIM_INFINITY))
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
@@ -97,6 +97,11 @@ class LimiterLinux(Limiter):
         """
         signal.signal(signal.SIGALRM, LimiterLinux._handler)
         signal.alarm(wall_time)
+
+    def _try_remove_memory_limit(self) -> bool:
+        """Remove memory limit if it can"""
+        resource.setrlimit(resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+        return True
 
     def _debug_memory(self) -> str:
         """Prints the memory used by the process

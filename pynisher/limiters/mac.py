@@ -69,7 +69,7 @@ class LimiterMac(Limiter):
             The memory limit in bytes
         """
         try:
-            resource.setrlimit(resource.RLIMIT_AS, (memory, memory))
+            resource.setrlimit(resource.RLIMIT_AS, (memory, resource.RLIM_INFINITY))
         except Exception:
             warnings.warn("Limiting memory is not supported on your system.")
 
@@ -108,3 +108,17 @@ class LimiterMac(Limiter):
         """
         signal.signal(signal.SIGALRM, LimiterMac._handler)
         signal.alarm(wall_time)
+
+    def _try_remove_memory_limit(self) -> bool:
+        """Try to remove the memory limit if possible
+
+        Returns
+        -------
+        success: bool
+            Whether it was successful
+        """
+        try:
+            resource.setrlimit(resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+            return True
+        except Exception:
+            return False

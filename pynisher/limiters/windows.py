@@ -15,3 +15,7 @@ class LimiterWindows(Limiter):
     def limit_wall_time(self, wall_time: int) -> None:
         """Limit's the wall time of this process."""
         warnings.warn("Currently `wall_time` not implemented on Windows")
+
+    def _try_remove_memory_limit(self) -> bool:
+        """Remove memory limit if it can"""
+        return False

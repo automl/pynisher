@@ -6,6 +6,9 @@ from pynisher.exceptions import MemorylimitException
 
 import pytest
 
+if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
+    pytest.skip("Can currently only limit memory on Linux ", allow_module_level=True)
+
 
 def usememory(x: int) -> None:
     """Use a certain amount of memory in MB"""
@@ -14,7 +17,6 @@ def usememory(x: int) -> None:
     return
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Can't limit memory on Darwin")
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])
 def test_fail(limit: int) -> None:
     """Using more than the allocated memory should raise an Error"""
@@ -27,7 +29,6 @@ def test_fail(limit: int) -> None:
         restricted_func(allocation_bytes)
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Can't limit memory on Darwin")
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])
 def test_success(limit: int) -> None:
     """Using less than the allocated memory should be fine

@@ -176,8 +176,17 @@ class Pynisher(ContextDecorator):
         subprocess.start()
 
         try:
-            # Will block here until a result is given back from the subprocess
-            result, process_error = recieve_pipe.recv()
+            # Will block here until 1 of 3 results is given back from the subprocess
+            # * result, None            | success
+            # * None, (err, traceback)  | failed
+            # * None                    | failed due to MemoryError during sending error
+            packet = recieve_pipe.recv()
+
+            if packet is None:
+                raise MemorylimitException
+
+            result, process_error = packet
+
         except EOFError:
             # This is raised when there is nothing left in the pipe to recieve
             # and the other end was closed. Should be fine without it but it's
