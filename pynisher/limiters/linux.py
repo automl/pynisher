@@ -82,7 +82,7 @@ class LimiterLinux(Limiter):
         hard = cpu_time + grace_period
 
         resource.setrlimit(resource.RLIMIT_CPU, (soft, hard))
-        signal.signal(signal.SIGALRM, LimiterLinux._handler)
+        signal.signal(signal.SIGXCPU, LimiterLinux._handler)
 
     def limit_wall_time(self, wall_time: int) -> None:
         """Limit the wall time for this process
