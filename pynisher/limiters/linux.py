@@ -81,6 +81,9 @@ class LimiterLinux(Limiter):
         soft = cpu_time
         hard = cpu_time + grace_period
 
+        if hard < (soft + 1):
+            hard = soft + 1
+
         resource.setrlimit(resource.RLIMIT_CPU, (soft, hard))
         signal.signal(signal.SIGXCPU, LimiterLinux._handler)
 
