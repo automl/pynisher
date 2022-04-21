@@ -25,6 +25,7 @@ class Pynisher(ContextDecorator):
         grace_period: int = 1,
         context: str = "fork",
         raises: bool = True,
+        warnings: bool = True,
     ) -> None:
         """
         Parameters
@@ -60,6 +61,9 @@ class Pynisher(ContextDecorator):
 
         raises : bool = True
             Whether any error from the subprocess should filter up and be raised.
+
+        warnings : bool
+            Whether to emit pynisher warnings or not.
         """  # noqa
         if not callable(func):
             raise ValueError(f"`func` ({func}) must be callable")
@@ -92,6 +96,7 @@ class Pynisher(ContextDecorator):
         self.grace_period = grace_period
         self.raises = raises
         self.context = multiprocessing.get_context(context)
+        self.warnings = warnings
 
     def __enter__(self) -> Callable:
         """Doesn't do anything to useful at the moment.
@@ -157,6 +162,7 @@ class Pynisher(ContextDecorator):
             cpu_time=self.cpu_time,
             wall_time=self.wall_time,
             grace_period=self.grace_period,
+            warnings=self.warnings,
         )
 
         # We now create the subprocess and let it know that it should call the limiter's
@@ -245,6 +251,7 @@ def limit(
     grace_period: int = 1,
     context: str = "fork",
     raises: bool = True,
+    warnings: bool = True,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:  # Lol ((...) -> T) -> ((...) -> T)
     """Limit a function by using subprocesses
 
@@ -286,6 +293,9 @@ def limit(
 
     raises : bool = True
         Whether any error from the subprocess should filter up and be raised.
+
+    warnings : bool = True
+        Whether to emit pynisher warnings or not.
     """  # noqa
     # Incase the first argument is a function, we assume it was missued
     #

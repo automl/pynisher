@@ -107,35 +107,33 @@ grace_period: int = 1
 
 # This is the multiprocess context used, please refer to their documentation
 context: "fork" | "spawn" | "forkserver" | None = "fork"
+
+# Whether to emit warnings form Pynisher or not, will not control warnings
+# from the restricted function
+warnings: bool = True
 ```
 
 ## Missing from v0.6.0
-For simplicity, pynisher will no longer try to control `stdout`, `stderr`, instead end users
-can use the builtins `redirect_stdout` and `redirect_stderr` of Python to send things as needed.
+For simplicity, pynisher will no longer try to control `stdout`, `stderr`, instead
+users can use the builtins `redirect_stdout` and `redirect_stderr` of Python to
+send things as needed.
 
-Pynisher issues warnings through `stderr`.
+Pynisher issues warnings through `stderr`. Depending on how you set up the `context`
+to spawn a new process, using objects may now work as intended. The safest option
+is to write to a file if needed.
 
 ```python
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr
 
-# Capture warnings in a string
-from io import StringIO
-stderr = StringIO()
-with redirect_stderr(stderr):
+# You can always disable warnings from Pynisher
+restricted_func = Pynisher(func, warnings=False)
+
+# Capture warnings in a file
+with open("stderr.txt", "w") as stderr, redirect_stderr(stderr):
     restricted_func()
 
-stderr_output = stderr.getvalue()
-
-# Send everything to a files
-with open("stdout.txt", "w") as out, open("stderr.txt", "w") as err:
-    with redirect_stdout(out), redirect_stderr(err):
-        restricted_function()
-
-# Just send everything to the void
-import os
-with open(os.devnull, "w") as devnull:
-    with redirect_stdout(devnull), redirect_stderr(devnull):
-        restricted_function()
+with open("stderr.txt", "r") as stderr:
+    print(stderr.readlines())
 ```
 
 ## Pynisher and Multithreading

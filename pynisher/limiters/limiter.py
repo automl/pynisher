@@ -23,6 +23,7 @@ class Limiter(ABC):
         cpu_time: int | None = None,
         wall_time: int | None = None,
         grace_period: int = 1,
+        warnings: bool = True,
     ) -> None:
         """
         Parameters
@@ -44,6 +45,9 @@ class Limiter(ABC):
 
         grace_period : int = 1
             The grace period in seconds to give for a process to shutdown once signalled
+
+        warnings : bool = True
+            Whether to emit pynisher warnings or not.
         """
         self.func = func
         self.output = output
@@ -51,6 +55,7 @@ class Limiter(ABC):
         self.cpu_time = cpu_time
         self.wall_time = wall_time
         self.grace_period = grace_period
+        self.warnings = warnings
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         """Set process limits and then call the function with the given arguments.
@@ -80,9 +85,9 @@ class Limiter(ABC):
                     msg = (
                         f"Current memory usage in new process is {memusage}B but "
                         f" setting limit to {self.memory}B. Likely to fail, try"
-                        f" increasing the memory limit",
+                        f" increasing the memory limit"
                     )
-                    print(msg, file=sys.stderr)
+                    self._raise_warning(msg)
 
                 self.limit_memory(self.memory)
 
@@ -130,6 +135,7 @@ class Limiter(ABC):
         cpu_time: int | None = None,
         wall_time: int | None = None,
         grace_period: int = 1,
+        warnings: bool = True,
     ) -> Limiter:
         """For full documentation, see __init__."""
         # NOTE: __init__ param duplication
@@ -143,6 +149,7 @@ class Limiter(ABC):
             "cpu_time": cpu_time,
             "wall_time": wall_time,
             "grace_period": grace_period,
+            "warnings": warnings,
         }
 
         # There is probably a lot more identifiers but for now this covers our use case
@@ -203,3 +210,7 @@ class Limiter(ABC):
             Whether it was successful or not
         """
         ...
+
+    def _raise_warning(self, msg: str) -> None:
+        if self.warnings is True:
+            print(msg, file=sys.stderr)
