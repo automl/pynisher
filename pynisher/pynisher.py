@@ -237,6 +237,7 @@ T = TypeVar("T")
 #   For now this should work
 #
 def limit(
+    *,
     name: str | None = None,
     memory: int | tuple[int, str] | None = None,
     cpu_time: int | None = None,
