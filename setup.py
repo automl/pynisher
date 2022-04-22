@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 readme = Path(__file__).parent / "README.md"
 
@@ -10,7 +10,12 @@ with readme.open("r") as fh:
 setup(
     name="pynisher",
     version="0.7.0",
-    packages=["pynisher"],
+    packages=find_packages(
+        where=".",
+        include=["pynisher*"],
+        exclude=["test*"]
+    ),
+    include_package_data=True,
     install_requires=["psutil"],
     extras_require={
         "test": [
@@ -35,7 +40,6 @@ setup(
     description="A library to limit the resources used by functions using subprocesses",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    include_package_data=False,
     keywords="resources",
     license="MIT",
     url="https://github.com/automl/pynisher",
