@@ -91,6 +91,9 @@ module = [
     "psutil.*",
     "setuptools.*",
     "pytest.*",
+    "winerror.*",
+    "win32api.*",
+    "win32job.*",
 ]
 ignore_missing_imports = true
 
