@@ -12,7 +12,7 @@ setup(
     version="0.7.0",
     packages=find_packages(where=".", include=["pynisher*"], exclude=["test*"]),
     include_package_data=True,
-    install_requires=["psutil", "pywin32 ; platform_system=='Windows'"],
+    install_requires=["psutil", "pywin32==302; platform_system=='Windows'"],
     extras_require={
         "test": [
             "pytest",
