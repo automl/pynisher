@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable, TypeVar
 
 import multiprocessing
+import sys
 from contextlib import ContextDecorator
 from functools import wraps
 
@@ -263,6 +264,12 @@ def limit(
 
         f()
 
+    Note
+    ----
+    Due to how multiprocessing pickling works, `@limit(...)` does not
+    work for your Mac/Windows with Python >= 3.8. Please use the `Pynisher`"
+    method of limiting resources in this case.
+
     Parameters
     ----------
     name : str | None
@@ -297,6 +304,15 @@ def limit(
     warnings : bool = True
         Whether to emit pynisher warnings or not.
     """  # noqa
+    if (sys.platform.startswith("win") or sys.platform.startswith("darwin")) and (
+        sys.version_info >= (3, 8)
+    ):
+        raise RuntimeError(
+            "Due to how multiprocessing pickling works, `@limit(...)` does not"
+            f" work for {sys.platform} with Python >= 3.8. Please use the `Pynisher`"
+            " method of limiting resources."
+        )
+
     # Incase the first argument is a function, we assume it was missued
     #
     # @limit

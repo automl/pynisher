@@ -1,16 +1,24 @@
 """These tests ensure the API of how this can be used is enforced."""
 import os
+import sys
 
 from pynisher import Pynisher, limit
 
 import pytest
 
+skipif = pytest.mark.skipif
 parametrize = pytest.mark.parametrize
 
 
 def subfunction() -> int:
     """Small test function which returns the id"""
     return os.getpid()
+
+
+@limit(name="hello")
+def limited_func_with_decorator() -> int:
+    """A function with the limit decorator"""
+    return subfunction()
 
 
 def test_as_contextmanager() -> None:
@@ -53,6 +61,11 @@ def test_run() -> None:
     assert this_process_id != other_process_id
 
 
+@skipif(
+    (sys.platform.startswith("win") or sys.platform.startswith("darwin"))
+    and sys.version_info >= (3, 8),
+    reason="@limit decorator only works with Python <= 3.7 or on Linux",
+)
 def test_limit_gives_helpful_err_message_with_misuse() -> None:
     """
     Expects
@@ -66,11 +79,28 @@ def test_limit_gives_helpful_err_message_with_misuse() -> None:
             return x
 
 
-@limit(name="hello")
-def _f() -> int:
-    return subfunction()
+@skipif(
+    not (
+        (sys.platform.startswith("win") or sys.platform.startswith("darwin"))
+        and sys.version_info >= (3, 8)
+    ),
+    reason="@limit decorator is supported and shouldn't raise",
+)
+def test_limit_raises_if_not_supported() -> None:
+    """
+    Expects
+    -------
+    * Should raise an Error if limit is not supported
+    """
+    with pytest.raises(RuntimeError, match=r"Due to how multiprocessing"):
+        limited_func_with_decorator()
 
 
+@skipif(
+    (sys.platform.startswith("win") or sys.platform.startswith("darwin"))
+    and sys.version_info >= (3, 8),
+    reason="@limit decorator only works with Python <= 3.7 or on Linux",
+)
 def test_limit_as_decorator() -> None:
     """
     Expects
@@ -78,7 +108,7 @@ def test_limit_as_decorator() -> None:
     * Should be able to decorate function
     """
     this_process_id = os.getpid()
-    other_process_id = _f()
+    other_process_id = limited_func_with_decorator()
     assert this_process_id != other_process_id
 
 
@@ -99,12 +129,8 @@ def test_bad_memory_arg(memory: int) -> None:
     -------
     * Should raise an Error about a bad memory limit
     """
-
-    def _f() -> None:
-        pass
-
     with pytest.raises(ValueError, match=r"memory"):
-        Pynisher(_f, memory=memory)
+        Pynisher(subfunction, memory=memory)
 
 
 @parametrize("cpu_time", [-1, 0])
