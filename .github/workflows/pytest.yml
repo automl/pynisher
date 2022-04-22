@@ -35,7 +35,6 @@ jobs:
   # General unit tests
   source-test:
     name: ${{ matrix.python-version }}-${{ matrix.os }}
-    timeout-minutes: 10
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -62,15 +61,18 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install wheel
         python -m pip install -e ".${{ env.extra-requires }}"
+
     - name: Store git status
       id: status-before
       shell: bash
       run: |
         echo "::set-output name=BEFORE::$(git status --porcelain -b)"
+
     - name: Tests
-      timeout-minutes: 45
+      timeout-minutes: 5
       run: |
         pytest ${{ env.pytest-args }} ${{ env.test-dir }}
+
     - name: Check for files left behind by test
       run: |
         before="${{ steps.status-before.outputs.BEFORE }}"
@@ -112,8 +114,10 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install wheel
         python -m pip install -e ".${{ env.extra-requires }}"
+        conda install pywin32
+
     - name: Tests
-      timeout-minutes: 45
+      timeout-minutes: 5
       run: |
           pytest ${{ env.pytest-args }} ${{ env.test-dir }}
 
@@ -153,6 +157,6 @@ jobs:
         python -m pip install ${{ env.sdist_name }}${{ env.extra-requires }}
 
     - name: Tests
-      timeout-minutes: 45
+      timeout-minutes: 5
       run: |
         python -m pytest ${{ env.pytest-args }} ${{ env.test-dir }}
