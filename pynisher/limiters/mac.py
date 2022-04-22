@@ -16,6 +16,7 @@ from typing import Any
 
 import resource
 import signal
+import traceback
 
 from pynisher.exceptions import CpuTimeoutException, TimeoutException
 from pynisher.limiters.limiter import Limiter
@@ -67,10 +68,10 @@ class LimiterMac(Limiter):
         memory : int
             The memory limit in bytes
         """
-        try:
-            resource.setrlimit(resource.RLIMIT_AS, (memory, resource.RLIM_INFINITY))
-        except Exception:
-            self._raise_warning("Limiting memory is not supported on your system.")
+        # This will likely Error on mac, however users can check for support
+        # before hand to prevent issues. We would like this to raise an Error
+        # if it does not work and was requested, instead of silently failing
+        resource.setrlimit(resource.RLIMIT_AS, (memory, resource.RLIM_INFINITY))
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
@@ -121,6 +122,9 @@ class LimiterMac(Limiter):
                 resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
             )
             return True
-        except Exception:
-            self._raise_warning("Limiting memory is not supported on your system.")
+        except Exception as e:
+            self._raise_warning(
+                f"Couldn't remove limit `memory` on Darwin due to Error: {e}"
+                f"\n{traceback.format_exc()} "
+            )
             return False

@@ -16,6 +16,7 @@ from typing import Any
 
 import resource
 import signal
+import traceback
 
 from pynisher.exceptions import CpuTimeoutException, TimeoutException
 from pynisher.limiters.limiter import Limiter
@@ -100,10 +101,17 @@ class LimiterLinux(Limiter):
 
     def _try_remove_memory_limit(self) -> bool:
         """Remove memory limit if it can"""
-        resource.setrlimit(
-            resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
-        )
-        return True
+        try:
+            resource.setrlimit(
+                resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
+            )
+            return True
+        except Exception as e:
+            self._raise_warning(
+                f"Couldn't remove limit `memory` on Linux due to Error: {e}"
+                f"\n{traceback.format_exc()} "
+            )
+            return False
 
     def _debug_memory(self) -> str:
         """Prints the memory used by the process
