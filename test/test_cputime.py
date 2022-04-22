@@ -1,14 +1,15 @@
-import sys
+import platform
 import time
 
-from pynisher import Pynisher
-from pynisher.exceptions import CpuTimeoutException
+from pynisher import CpuTimeoutException, Pynisher, supports_cputime
 
 import pytest
 
-plat = sys.platform.lower()
-if plat.lower().startswith("win"):
-    pytest.skip(f"Can't limit cputime on {plat} ", allow_module_level=True)
+if not supports_cputime():
+    pytest.skip(
+        f"Can't limit cputime on {platform.platform()}",
+        allow_module_level=True,
+    )
 
 
 def func(execution_time: float) -> float:

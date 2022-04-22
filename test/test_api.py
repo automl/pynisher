@@ -1,13 +1,9 @@
 """These tests ensure the API of how this can be used is enforced."""
 import os
-import sys
 
-from pynisher import Pynisher, limit
+from pynisher import Pynisher
 
 import pytest
-
-parametrize = pytest.mark.parametrize
-plat = sys.platform
 
 
 def subfunction() -> int:
@@ -65,7 +61,7 @@ def test_bad_func_arg() -> None:
         Pynisher(func=None)  # type: ignore
 
 
-@parametrize("memory", [-1, 0])
+@pytest.mark.parametrize("memory", [-1, 0])
 def test_bad_memory_arg(memory: int) -> None:
     """
     Expects
@@ -76,7 +72,7 @@ def test_bad_memory_arg(memory: int) -> None:
         Pynisher(subfunction, memory=memory)
 
 
-@parametrize("cpu_time", [-1, 0])
+@pytest.mark.parametrize("cpu_time", [-1, 0])
 def test_bad_cpu_time_arg(cpu_time: int) -> None:
     """
     Expects
@@ -91,7 +87,7 @@ def test_bad_cpu_time_arg(cpu_time: int) -> None:
         Pynisher(_f, cpu_time=cpu_time)
 
 
-@parametrize("wall_time", [-1, 0])
+@pytest.mark.parametrize("wall_time", [-1, 0])
 def test_bad_wall_time_arg(wall_time: int) -> None:
     """
     Expects
@@ -106,7 +102,7 @@ def test_bad_wall_time_arg(wall_time: int) -> None:
         Pynisher(_f, wall_time=wall_time)
 
 
-@parametrize("grace_period", [-1, 0])
+@pytest.mark.parametrize("grace_period", [-1, 0])
 def test_bad_grace_period_arg(grace_period: int) -> None:
     """
     Expects
@@ -133,23 +129,3 @@ def test_bad_context_arg() -> None:
 
     with pytest.raises(ValueError, match=r"context"):
         Pynisher(_f, context="bad arg")
-
-
-@pytest.mark.skipif(
-    not (
-        (plat.lower().startswith("win") or plat.startswith("darwin"))
-        and sys.version_info >= (3, 8)
-    ),
-    reason="@limit is only supported on Linux or Windows/Mac when Python < 3.8",
-)
-def test_limit_raises_if_not_supported() -> None:
-    """
-    Expects
-    -------
-    * Should raise an Error if limit is not supported
-    """
-    with pytest.raises(RuntimeError, match=r"Due to how multiprocessing*"):
-
-        @limit(name="hello")
-        def limited_func_with_decorator() -> int:
-            pass

@@ -107,3 +107,23 @@ def supports_memory() -> bool:
             return False
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
+
+
+def supports_limit_decorator() -> bool:
+    """Whether using the decorator @limit is supported
+
+    Returns
+    -------
+    bool
+        Whether using @limit is supported
+    """
+    plat = sys.platform.lower()
+    version = sys.version_info
+    if plat.startswith("linux"):
+        return True
+    elif plat.startswith("win"):
+        return not (version < (3, 8))
+    elif plat.startswith("darwin"):
+        return not (version < (3, 8))
+    else:
+        raise NotImplementedError(f"Unknown system {platform.platform()}")

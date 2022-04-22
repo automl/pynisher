@@ -8,11 +8,8 @@ import pytest
 
 plat = sys.platform
 
-if plat.lower().startswith("win") or plat.lower().startswith("darwin"):
-    pytest.skip(
-        "Only seems to capture properly on Linux",
-        allow_module_level=True,
-    )
+if not plat.lower() == "linux":
+    pytest.skip("Only seems to capture properly on Linux", allow_module_level=True)
 
 
 def f() -> int:

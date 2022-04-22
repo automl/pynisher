@@ -9,6 +9,7 @@ from pynisher.pynisher import Pynisher, limit
 from pynisher.support import (
     supports,
     supports_cputime,
+    supports_limit_decorator,
     supports_memory,
     supports_walltime,
 )
@@ -25,4 +26,5 @@ __all__ = [
     "supports_walltime",
     "supports_cputime",
     "supports_memory",
+    "supports_limit_decorator",
 ]

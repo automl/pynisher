@@ -1,15 +1,14 @@
-import sys
+import platform
 
-from pynisher import Pynisher
-from pynisher.exceptions import MemoryLimitException
+from pynisher import MemoryLimitException, Pynisher, supports
 from pynisher.util import Monitor, memconvert
 
 import pytest
 
-plat = sys.platform
-if plat.lower().startswith("darwin"):
+if not supports("memory"):
     pytest.skip(
-        f"Doesn't support limiting memory on {sys.platform} ", allow_module_level=True
+        f"Doesn't support limiting memory on {platform.platform()} ",
+        allow_module_level=True,
     )
 
 

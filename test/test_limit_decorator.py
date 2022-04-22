@@ -1,17 +1,13 @@
 import os
-import sys
+import platform
 
-from pynisher import limit
+from pynisher import limit, supports_limit_decorator
 
 import pytest
 
-plat = sys.platform
-
-if (
-    plat.lower().startswith("win") or plat.lower().startswith("darwin")
-) and sys.version_info >= (3, 8):
+if not supports_limit_decorator():
     pytest.skip(
-        "@limit decorator only works with Python <= 3.7 or on Linux",
+        f"Platform {platform.platform()} does not suppport @limit",
         allow_module_level=True,
     )
 else:
