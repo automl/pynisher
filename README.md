@@ -163,8 +163,10 @@ with open("stderr.txt", "r") as stderr:
 ```
 
 The support for passing a `logger` to `Pynisher` has also been removed. The only diagnostics
-information is in the form of prints to `stderr` when a limiting processes fail.
+information that would have been sent to the logger is not communicated with prints to `stderr`.
+These diagnostic messages only occur when an attempt to limit resources failed
 This can be captured or disabled as above.
+
 Any other kind of issue will raise an exception with relevant information.
 
 The support for checking `exit_status` was removed and the success of a pynisher process can
