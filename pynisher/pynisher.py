@@ -23,7 +23,7 @@ class Pynisher(ContextDecorator):
         cpu_time: int | None = None,
         wall_time: int | None = None,
         grace_period: int = 1,
-        context: str = "fork",
+        context: str | None = None,
         raises: bool = True,
         warnings: bool = True,
     ) -> None:
@@ -55,7 +55,7 @@ class Pynisher(ContextDecorator):
         grace_period : int = 1
             Buffer time in seconds while limiting CPU time.
 
-        context : str = "fork" | "spawn" | "forkserver" | None
+        context : "fork" | "forkserver" | "spawn" | None = None
             The context to use with multiprocessing.get_context()
             * https://docs.python.org/3/library/multiprocessing.html#multiprocessing.get_context
 
@@ -77,8 +77,8 @@ class Pynisher(ContextDecorator):
         if not grace_period >= 1:
             raise ValueError(f"`grace_period` ({grace_period}) must be int >= 1")
 
-        valid_contexts = ["fork", "spawn", "forkserver"]
-        if context is not None and context not in valid_contexts:
+        valid_contexts = ["fork", "spawn", "forkserver", None]
+        if context not in valid_contexts:
             raise ValueError(f"`context` ({context}) must be in {valid_contexts}")
 
         if isinstance(memory, tuple):
@@ -249,7 +249,7 @@ def limit(
     cpu_time: int | None = None,
     wall_time: int | None = None,
     grace_period: int = 1,
-    context: str = "fork",
+    context: str | None = None,
     raises: bool = True,
     warnings: bool = True,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:  # Lol ((...) -> T) -> ((...) -> T)
@@ -287,7 +287,7 @@ def limit(
     grace_period : int = 1
         Buffer time in seconds to give to a process to end when given a signal to end.
 
-    context : str = "fork" | "spawn" | "forkserver" | None
+    context : "fork" | "forkserver" | "spawn" | None = None
         The context to use with multiprocessing.get_context()
         * https://docs.python.org/3/library/multiprocessing.html#multiprocessing.get_context
 

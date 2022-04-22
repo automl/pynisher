@@ -106,7 +106,8 @@ wall_time: int | None = None
 grace_period: int = 1
 
 # This is the multiprocess context used, please refer to their documentation
-context: "fork" | "spawn" | "forkserver" | None = "fork"
+# https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+context: "fork" | "spawn" | "forkserver" | None = None
 
 # Whether to emit warnings form Pynisher or not, will not control warnings
 # from the restricted function
