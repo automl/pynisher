@@ -35,6 +35,7 @@ jobs:
   # General unit tests
   source-test:
     name: ${{ matrix.python-version }}-${{ matrix.os }}
+    timeout-minutes: 10
 
     runs-on: ${{ matrix.os }}
     defaults:
@@ -154,4 +155,4 @@ jobs:
     - name: Tests
       timeout-minutes: 45
       run: |
-        pytest ${{ env.pytest-args }} ${{ env.test-dir }}
+        python -m pytest ${{ env.pytest-args }} ${{ env.test-dir }}

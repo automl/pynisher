@@ -7,6 +7,7 @@ from pynisher import Pynisher, limit
 import pytest
 
 parametrize = pytest.mark.parametrize
+plat = sys.platform
 
 
 def subfunction() -> int:
@@ -136,7 +137,7 @@ def test_bad_context_arg() -> None:
 
 @pytest.mark.skipif(
     not (
-        (sys.platform.startswith("win") or sys.platform.startswith("darwin"))
+        (plat.lower().startswith("win") or plat.startswith("darwin"))
         and sys.version_info >= (3, 8)
     ),
     reason="@limit is only supported on Linux or Windows/Mac when Python < 3.8",

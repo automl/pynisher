@@ -5,8 +5,10 @@ from pynisher import limit
 
 import pytest
 
+plat = sys.platform
+
 if (
-    sys.platform.startswith("win") or sys.platform.startswith("darwin")
+    plat.lower().startswith("win") or plat.lower().startswith("darwin")
 ) and sys.version_info >= (3, 8):
     pytest.skip(
         "@limit decorator only works with Python <= 3.7 or on Linux",

@@ -16,7 +16,7 @@ if sys.version_info <= (3, 8):
 
     def emit_sigterm() -> None:
         """Emit a SIGTERM using os.kill as `raise_signal` in 3.8"""
-        os.kill(os.getpid(), signal.SIGTERM)
+        os.kill(os.getpid(), signal.SIGBREAK)  # type: ignore
 
 else:
 
@@ -33,7 +33,10 @@ class LimiterWindows(Limiter):
         #   For windows, we don't have access to any specific signals.
         #   The only signal we explicitly can handle is SIGTERM which
         #   is a generic signal to terminate a process
-        if signum == signal.SIGTERM:
+        if signum == signal.SIGTERM or signum == signal.SIGBREAK:  # type: ignore
+            raise WallTimeoutException
+
+        if signum == signal.SIGBREAK:  # type: ignore
             raise WallTimeoutException
 
         # UNKNOWN

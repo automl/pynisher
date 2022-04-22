@@ -6,9 +6,11 @@ from pynisher.util import Monitor, memconvert
 
 import pytest
 
-plat = sys.platform.lower()
-# if plat.startswith("darwin"):
-#    pytest.skip(f"Doesn't support limiting memory on {plat} ", allow_module_level=True)
+plat = sys.platform
+if plat.lower().startswith("darwin"):
+    pytest.skip(
+        f"Doesn't support limiting memory on {sys.platform} ", allow_module_level=True
+    )
 
 
 def usememory(x: int) -> None:

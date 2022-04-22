@@ -78,7 +78,7 @@ Currently we mainly support Linux with partial support for Mac:
 | --      | -----------        | ----------         | --------                                       |
 | Linux   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:                             |
 | Mac     | :heavy_check_mark: | :heavy_check_mark: | :grey_question: (New MacOS doesn't support it) |
-| Windows | :x:                | :x:                | :x:                                            |
+| Windows | :heavy_check_mark: | :x:                | :heavy_check_mark:                             |
 
 
 It's important to note that the spawned subprocess will consume some initial amount of memory,

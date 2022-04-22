@@ -6,7 +6,9 @@ from pynisher import Pynisher
 
 import pytest
 
-if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
+plat = sys.platform
+
+if plat.lower().startswith("win") or plat.lower().startswith("darwin"):
     pytest.skip(
         "Only seems to capture properly on Linux",
         allow_module_level=True,
