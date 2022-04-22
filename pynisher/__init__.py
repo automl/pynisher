@@ -6,6 +6,12 @@ from pynisher.exceptions import (
     WallTimeoutException,
 )
 from pynisher.pynisher import Pynisher, limit
+from pynisher.support import (
+    supports,
+    supports_cputime,
+    supports_memory,
+    supports_walltime,
+)
 
 __all__ = [
     "Pynisher",
@@ -15,4 +21,8 @@ __all__ = [
     "PynisherException",
     "TimeoutException",
     "WallTimeoutException",
+    "supports",
+    "supports_walltime",
+    "supports_cputime",
+    "supports_memory",
 ]
