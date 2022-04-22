@@ -30,5 +30,6 @@ jobs:
 
     - name: PEP 561 Compliance
       run: |
+        pip install mypy
         cd ..  # required to use the installed version of pynisher
         if ! mypy -c "import pynisher"; then exit 1; fi
