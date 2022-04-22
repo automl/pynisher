@@ -105,30 +105,37 @@ class Limiter(ABC):
             # Call our function and if there are no exceptions raised, default to
             # no error or trace
             result = self.func(*args, **kwargs)
+            error = None
 
             # This is a bit hacky and specific to Windows, however there's
             # no quick way to control this within LimiterWindows
             if self.timer is not None:
                 self.timer.cancel()
 
-            error = None
-            self.output.send((result, None))
+            # Sending can cause some more memory to be allocated
+            # Try removing the memory limit and send again if it fails
+            try:
+                self.output.send((result, None))
+            except MemoryError as e:
+                if self._try_remove_memory_limit():
+                    self.output.send((result, None))
+                else:
+                    raise MemoryError("Failed to return result due to memory") from e
 
         except Exception as e:
 
-            # Something went wrong, we catch the error and try to send that.
+            # Something went wrong:
+            # * During the function call
+            # * Couldn't remove memory limit when failing to send the result back
             str_traceback = "".join(traceback.format_exception(*sys.exc_info()))
             error = (e, str_traceback)  # The traceback is lost if not stored
 
             try:
                 self.output.send((None, error))
             except MemoryError:
-                # `send` will also allocate memory and can lead to corrupt Connection
-                # objects. This causes the recieve to hang on `recv`, causing
-                # everything to lock. We try to remove the memory limit and then
-                # try to send again.
-                success = self._try_remove_memory_limit()
-                if success:
+                # Sending can cause some more memory to be allocated
+                # Try removing the memory limit and send again if it fails
+                if self._try_remove_memory_limit():
                     self.output.send((None, error))
                 else:
                     self.output.send(None)
