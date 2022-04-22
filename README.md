@@ -74,11 +74,24 @@ Once in the subprocess, the resources will be limited and the function ran!
 
 Currently we mainly support Linux with partial support for Mac:
 
-| OS      | `wall_time`        | `cpu_time`         | `memory`                                       |
-| --      | -----------        | ----------         | --------                                       |
-| Linux   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:                             |
-| Mac     | :heavy_check_mark: | :heavy_check_mark: | :grey_question: (New MacOS doesn't support it) |
-| Windows | :heavy_check_mark: | :x:                | :heavy_check_mark:                             |
+| OS      | `wall_time`          | `cpu_time`         | `memory`             |
+| --      | -----------          | ----------         | --------             |
+| Linux   | :heavy_check_mark:   | :heavy_check_mark: | :heavy_check_mark:   |
+| Mac     | :heavy_check_mark:   | :heavy_check_mark: | :grey_question: (3.) |
+| Windows | :grey_question: (1.) | :x:                | :grey_question: (2.) |
+
+1. For `Python 3.7`, there is no access to `signal.raise_signal` which is used to trigger
+the timeout. The workaround using `os.kill(pid, signal)` doesn't seem to kill the process
+as intended as the process will continue to run. Seems fixable though.
+2. Mac doesn't seem to allow for limiting a processes memory. No workaround has been found
+including trying `launchctl` which seems global and ignores memory limiting. Possibly `ulimit`
+could work but needs to be tested.
+3. Limiting memory on Windows is done with the library `pywin32`. There seems to be installation
+issues when inside a conda environment with `Python 3.8` and `Python 3.9`, using `pip install`.
+The workaround is to instead install `pywin32` with `pip uninstall pywin32; conda install pywin32`.
+This is unlikely to effect anything when `pynisher` is installed with `conda install pynisher`
+but if installing it locally, this issue will occur. Using earlier versions of `pywin32` may
+also help.
 
 
 It's important to note that the spawned subprocess will consume some initial amount of memory,

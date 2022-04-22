@@ -114,7 +114,6 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install wheel
         python -m pip install -e ".${{ env.extra-requires }}"
-        conda install pywin32
 
     - name: Tests
       timeout-minutes: 5
