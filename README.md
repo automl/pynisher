@@ -130,6 +130,7 @@ from contextlib import redirect_stderr
 restricted_func = Pynisher(func, warnings=False)
 
 # Capture warnings in a file
+# Only seems to work properly on Linux
 with open("stderr.txt", "w") as stderr, redirect_stderr(stderr):
     restricted_func()
 

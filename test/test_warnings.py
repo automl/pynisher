@@ -1,9 +1,16 @@
+import sys
 from contextlib import redirect_stderr
 from pathlib import Path
 
 from pynisher import Pynisher
 
 import pytest
+
+if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
+    pytest.skip(
+        "Only seems to capture properly on Linux",
+        allow_module_level=True,
+    )
 
 
 def f() -> int:

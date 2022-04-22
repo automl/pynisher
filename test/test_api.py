@@ -66,19 +66,19 @@ def test_limit_gives_helpful_err_message_with_misuse() -> None:
             return x
 
 
+@limit(name="hello")
+def _f() -> int:
+    return subfunction()
+
+
 def test_limit_as_decorator() -> None:
     """
     Expects
     -------
     * Should be able to decorate function
     """
-
-    @limit(name="hello")
-    def f() -> int:
-        return subfunction()
-
     this_process_id = os.getpid()
-    other_process_id = f()
+    other_process_id = _f()
     assert this_process_id != other_process_id
 
 

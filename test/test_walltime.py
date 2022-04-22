@@ -1,9 +1,17 @@
+import sys
 import time
 
 from pynisher import Pynisher
 from pynisher.exceptions import TimeoutException
 
 import pytest
+
+platform = sys.platform
+if platform.startswith("win"):
+    pytest.skip(
+        f"Can't currently limit walltime on {platform} ",
+        allow_module_level=True,
+    )
 
 
 def func(sleep: float) -> bool:
