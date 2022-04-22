@@ -10,11 +10,7 @@ with readme.open("r") as fh:
 setup(
     name="pynisher",
     version="0.7.0",
-    packages=find_packages(
-        where=".",
-        include=["pynisher*"],
-        exclude=["test*"]
-    ),
+    packages=find_packages(where=".", include=["pynisher*"], exclude=["test*"]),
     include_package_data=True,
     install_requires=["psutil"],
     extras_require={

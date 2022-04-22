@@ -8,6 +8,7 @@ import platform
 import sys
 import traceback
 from multiprocessing.connection import Connection
+from threading import Timer
 
 from pynisher.util import Monitor
 
@@ -57,6 +58,10 @@ class Limiter(ABC):
         self.grace_period = grace_period
         self.warnings = warnings
 
+        # This is specifically done by Windows to raise a timeout for
+        # wall time
+        self.timer: Timer | None = None
+
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         """Set process limits and then call the function with the given arguments.
 
@@ -100,6 +105,12 @@ class Limiter(ABC):
             # Call our function and if there are no exceptions raised, default to
             # no error or trace
             result = self.func(*args, **kwargs)
+
+            # This is a bit hacky and specific to Windows, however there's
+            # no quick way to control this within LimiterWindows
+            if self.timer is not None:
+                self.timer.cancel()
+
             error = None
             self.output.send((result, None))
 
