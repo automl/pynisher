@@ -7,8 +7,8 @@ from pynisher.util import Monitor, memconvert
 import pytest
 
 plat = sys.platform.lower()
-if plat.startswith("win") or plat.startswith("darwin"):
-    pytest.skip("Can currently only limit memory on Linux ", allow_module_level=True)
+# if plat.startswith("darwin"):
+#    pytest.skip(f"Doesn't support limiting memory on {plat} ", allow_module_level=True)
 
 
 def usememory(x: int) -> None:

@@ -6,19 +6,12 @@ from pynisher import Pynisher, limit
 
 import pytest
 
-skipif = pytest.mark.skipif
 parametrize = pytest.mark.parametrize
 
 
 def subfunction() -> int:
     """Small test function which returns the id"""
     return os.getpid()
-
-
-@limit(name="hello")
-def limited_func_with_decorator() -> int:
-    """A function with the limit decorator"""
-    return subfunction()
 
 
 def test_as_contextmanager() -> None:
@@ -58,57 +51,6 @@ def test_run() -> None:
 
     this_process_id = os.getpid()
     other_process_id = pynisher.run()
-    assert this_process_id != other_process_id
-
-
-@skipif(
-    (sys.platform.startswith("win") or sys.platform.startswith("darwin"))
-    and sys.version_info >= (3, 8),
-    reason="@limit decorator only works with Python <= 3.7 or on Linux",
-)
-def test_limit_gives_helpful_err_message_with_misuse() -> None:
-    """
-    Expects
-    -------
-    * Should raise an error if decorator is used without arguments
-    """
-    with pytest.raises(ValueError, match=r"Please pass arguments to decorator `limit`"):
-
-        @limit  # type: ignore
-        def f(x: int) -> int:
-            return x
-
-
-@skipif(
-    not (
-        (sys.platform.startswith("win") or sys.platform.startswith("darwin"))
-        and sys.version_info >= (3, 8)
-    ),
-    reason="@limit decorator is supported and shouldn't raise",
-)
-def test_limit_raises_if_not_supported() -> None:
-    """
-    Expects
-    -------
-    * Should raise an Error if limit is not supported
-    """
-    with pytest.raises(RuntimeError, match=r"Due to how multiprocessing"):
-        limited_func_with_decorator()
-
-
-@skipif(
-    (sys.platform.startswith("win") or sys.platform.startswith("darwin"))
-    and sys.version_info >= (3, 8),
-    reason="@limit decorator only works with Python <= 3.7 or on Linux",
-)
-def test_limit_as_decorator() -> None:
-    """
-    Expects
-    -------
-    * Should be able to decorate function
-    """
-    this_process_id = os.getpid()
-    other_process_id = limited_func_with_decorator()
     assert this_process_id != other_process_id
 
 
@@ -190,3 +132,23 @@ def test_bad_context_arg() -> None:
 
     with pytest.raises(ValueError, match=r"context"):
         Pynisher(_f, context="bad arg")
+
+
+@pytest.mark.skipif(
+    not (
+        (sys.platform.startswith("win") or sys.platform.startswith("darwin"))
+        and sys.version_info >= (3, 8)
+    ),
+    reason="@limit is only supported on Linux or Windows/Mac when Python < 3.8",
+)
+def test_limit_raises_if_not_supported() -> None:
+    """
+    Expects
+    -------
+    * Should raise an Error if limit is not supported
+    """
+    with pytest.raises(RuntimeError, match=r"Due to how multiprocessing*"):
+
+        @limit(name="hello")
+        def limited_func_with_decorator() -> int:
+            pass
