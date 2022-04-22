@@ -3,12 +3,12 @@ import sys
 
 
 def supports(limit: str) -> bool:
-    """Check if pynisher can enforce limits on processes
+    """Check if pynisher supports a given feature
 
     Parameters
     ----------
-    limit: "walltime" | "cputime" | "memory"
-        The kind of limit to check support for
+    limit: "walltime" | "cputime" | "memory" | "decorator"
+        The kind of feature to check support for
 
     Returns
     -------
@@ -19,12 +19,13 @@ def supports(limit: str) -> bool:
         "walltime": supports_walltime,
         "cputime": supports_cputime,
         "memory": supports_memory,
+        "decorator": supports_limit_decorator,
     }
     func = mapping.get(limit.lower(), None)
     if func is not None:
         return func()
     else:
-        raise ValueError(f"Not a know limit, must be one of {list(mapping.keys())}")
+        raise ValueError(f"Not a known feature, must be one of {list(mapping.keys())}")
 
 
 def supports_walltime() -> bool:
@@ -33,6 +34,13 @@ def supports_walltime() -> bool:
     * Linux - Yes
     * Darwin - Yes
     * Windows - Yes if Python version > 3.7
+
+    Check respective "pynisher/limiters/<platform>.py"
+
+    Returns
+    -------
+    bool
+        Whether it's supported or not
     """
     plat = sys.platform.lower()
     if plat.startswith("linux"):
@@ -44,9 +52,9 @@ def supports_walltime() -> bool:
     elif plat.startswith("win"):
         # We don't have a way to do this yet for Python 3.7
         # Weird boolean syntax is because equality of version for >= seems to not work
-        return not sys.version_info < (3, 8)
+        # return not sys.version_info < (3, 8)
+        return True
     else:
-        raise NotImplementedError(f"Unknown system {platform.platform()}")
         raise NotImplementedError(f"Unknown system {platform.platform()}")
 
 
@@ -56,6 +64,8 @@ def supports_cputime() -> bool:
     * Linux - Yes
     * Darwin - Yes
     * Windows - No
+
+    Check respective "pynisher/limiters/<platform>.py"
 
     Returns
     -------
@@ -82,6 +92,8 @@ def supports_memory() -> bool:
     * Linux - Yes
     * Darwin - No
     * Windows - If `pywin32` installed correctly
+
+    Check respective "pynisher/limiters/<platform>.py"
 
     Returns
     -------
@@ -111,6 +123,12 @@ def supports_memory() -> bool:
 
 def supports_limit_decorator() -> bool:
     """Whether using the decorator @limit is supported
+
+    * Linx - Yes
+    * Mac - Only with Python 3.7
+    * Windows - Only with Python 3.7
+
+    Check `pynisher::limit` for why
 
     Returns
     -------

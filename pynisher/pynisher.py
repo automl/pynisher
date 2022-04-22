@@ -9,12 +9,7 @@ from functools import wraps
 
 from pynisher.exceptions import MemoryLimitException
 from pynisher.limiters import Limiter
-from pynisher.support import (
-    supports,
-    supports_cputime,
-    supports_memory,
-    supports_walltime,
-)
+from pynisher.support import supports
 from pynisher.util import memconvert
 
 
@@ -234,12 +229,12 @@ class Pynisher(ContextDecorator):
 
     @staticmethod
     def supports(limit: str) -> bool:
-        """Check if pynisher can enforce limits on processes
+        """Check if pynisher supports a given feature
 
         Parameters
         ----------
-        limit: "walltime" | "cputime" | "memory"
-            The kind of limit to check support for
+        limit: "walltime" | "cputime" | "memory" | "decorator"
+            The feature to check support for
 
         Returns
         -------
@@ -247,39 +242,6 @@ class Pynisher(ContextDecorator):
             Whether it is supported or not
         """
         return supports(limit)
-
-    @staticmethod
-    def supports_walltime() -> bool:
-        """Check if wall time is supported on this system
-
-        Returns
-        -------
-        bool
-            Whether it's supported or not
-        """
-        return supports_walltime()
-
-    @staticmethod
-    def supports_cputime() -> bool:
-        """Check if cpu time is supported on this system
-
-        Returns
-        -------
-        bool
-            Whether it's supported or not
-        """
-        return supports_cputime()
-
-    @staticmethod
-    def supports_memory() -> bool:
-        """Check if memory limit is supported on this system
-
-        Returns
-        -------
-        bool
-            Whether it's supported or not
-        """
-        return supports_memory()
 
 
 # NOTE: Can only use typevar on decorator
@@ -322,7 +284,7 @@ def limit(
     Note
     ----
     Due to how multiprocessing pickling works, `@limit(...)` does not
-    work for your Mac/Windows with Python >= 3.8. Please use the `Pynisher`"
+    work for Mac/Windows with Python >= 3.8. Please use the `Pynisher`"
     method of limiting resources in this case.
 
     Parameters

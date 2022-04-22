@@ -34,8 +34,9 @@ except MemoryLimitException:
     model = None
 ```
 
-You can even use the decorator, in which case it will always be done.
+You can even use the decorator, in which case it will always be limited.
 Passing `raises=False` means it will hide all errors and just return `None`.
+Please note in [Details](#details) that support for this is limited.
 ```python
 @limit(wall_time=1, raises=False)
 def notify_remote_server() -> Response:
@@ -74,11 +75,18 @@ Once in the subprocess, the resources will be limited and the function ran!
 
 Currently we mainly support Linux with partial support for Mac:
 
-| OS      | `wall_time`          | `cpu_time`         | `memory`             |
-| --      | -----------          | ----------         | --------             |
-| Linux   | :heavy_check_mark:   | :heavy_check_mark: | :heavy_check_mark:   |
-| Mac     | :heavy_check_mark:   | :heavy_check_mark: | :grey_question: (3.) |
-| Windows | :grey_question: (1.) | :x:                | :grey_question: (2.) |
+| OS      | `wall_time`          | `cpu_time`         | `memory`             | `@limit`             |
+| --      | -----------          | ----------         | --------             | --------             |
+| Linux   | :heavy_check_mark:   | :heavy_check_mark: | :heavy_check_mark:   | :heavy_check_mark:   |
+| Mac     | :heavy_check_mark:   | :heavy_check_mark: | :grey_question: (3.) | :grey_question: (4.) |
+| Windows | :grey_question: (1.) | :x:                | :grey_question: (2.) | :grey_question: (4.) |
+
+To check what if a feature is supported on your system:
+```python
+from pynisher import supports
+for limit in ["cputime", "walltime", "memory"]:
+    print(f"Supports {limit} - {supports(limit)}")
+```
 
 1. For `Python 3.7`, there is no access to `signal.raise_signal` which is used to trigger
 the timeout. The workaround using `os.kill(pid, signal)` doesn't seem to kill the process
@@ -92,6 +100,9 @@ The workaround is to instead install `pywin32` with `pip uninstall pywin32; cond
 This is unlikely to effect anything when `pynisher` is installed with `conda install pynisher`
 but if installing it locally, this issue will occur. Using earlier versions of `pywin32` may
 also help.
+4. Due to how multiprocessing pickling protocols work and were updated, `@limit(...)` does
+not work for your Mac/Windows with Python >= 3.8. Please use the `Pynisher` method of
+limiting resources in this case.
 
 
 It's important to note that the spawned subprocess will consume some initial amount of memory,
@@ -127,7 +138,7 @@ context: "fork" | "spawn" | "forkserver" | None = None
 warnings: bool = True
 ```
 
-## Missing from v0.6.0
+## Changes from v0.6.0
 For simplicity, pynisher will no longer try to control `stdout`, `stderr`, instead
 users can use the builtins `redirect_stdout` and `redirect_stderr` of Python to
 send things as needed.
@@ -150,6 +161,19 @@ with open("stderr.txt", "w") as stderr, redirect_stderr(stderr):
 with open("stderr.txt", "r") as stderr:
     print(stderr.readlines())
 ```
+
+The support for passing a `logger` to `Pynisher` has also been removed. The only diagnostics
+information is in the form of prints to `stderr` when a limiting processes fail.
+This can be captured or disabled as above.
+Any other kind of issue will raise an exception with relevant information.
+
+The support for checking `exit_status` was removed and the success of a pynisher process can
+be handled in the usual Python manner of checking for errors, with a `try: except:`. If you
+don't care for the `exit_status` then use `f = Pynisher(func, raises=False)` and you can
+check for output `output = f(...)`. This will be `None` if an error was raised and was `raises=False`.
+
+Pynisher no longer times your function for you with `self.wall_clock_time`. If you need to measure
+the duration it ran, please do so outside of `Pynisher`.
 
 ## Pynisher and Multithreading
 When Pynisher is used together with the Python Threading library, it is possible to run into
