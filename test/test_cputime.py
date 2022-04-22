@@ -6,12 +6,9 @@ from pynisher.exceptions import CpuTimeoutException
 
 import pytest
 
-platform = sys.platform
-if platform.startswith("win"):
-    pytest.skip(
-        f"Can't currently limit walltime on {platform} ",
-        allow_module_level=True,
-    )
+plat = sys.platform.lower()
+if plat.startswith("win"):
+    pytest.skip("Can currently only limit memory on Linux ", allow_module_level=True)
 
 
 def func(execution_time: float) -> float:
