@@ -4,7 +4,8 @@ Pynisher is a library to limit resources during the running of synchronous funct
 
 Limit the time a process can take
 ```python
-from pynisher import Pynisher, limit, TimeoutException, MemoryLimitException
+from pynisher import Pynisher
+
 
 def sleepy(x: int) -> int:
     time.sleep(x)
@@ -17,6 +18,9 @@ with Pynisher(sleepy, wall_time=7) as restricted_sleep:
 
 Limit the memory usage in a sequential manner
 ```python
+from pynisher import Pynisher, MemoryLimitException
+
+
 def train_memory_hungry_model(X, y) -> Model:
     # ... do some thing
     return Model
@@ -36,8 +40,12 @@ except MemoryLimitException:
 
 You can even use the decorator, in which case it will always be limited.
 Passing `raises=False` means it will hide all errors and just return `None`.
-Please note in [Details](#details) that support for this is limited.
+Please note in [Details](#details) that support for this is limited and mostly
+for Linux.
 ```python
+from pynisher import limit
+
+
 @limit(wall_time=1, raises=False)
 def notify_remote_server() -> Response:
     """We don't care that this fails, just give it a second to try"""
@@ -58,6 +66,9 @@ if (response := notify_remote_server()):
 You can safely raise errors from inside your function and the same kind of error will be reraised
 with a traceback.
 ```python
+from pynisher import Pynisher
+
+
 def f():
     raise MyCustomException()
 
@@ -80,6 +91,7 @@ To check what if a feature is supported on your system:
 ```python
 from pynisher import supports
 
+
 for limit in ["cputime", "walltime", "memory", "decorator"]:
     print(f"Supports {limit} - {supports(limit)}")
 ```
@@ -88,26 +100,21 @@ You can also do using `Pynisher`
 ```python
 from pynisher import Pynisher
 
-# As a static method on the class
 print(Pynisher.supports("walltime"))
 
-# On the function itself
-def f() -> None:
+
+restricted_func = Pynisher(f, ...)
+if not restricted_func.supports("memory"):
     ...
-
-with Pynisher(f, ...) as restricted_func:
-
-    if restricted_func.supports("memory"):
-        ...
 ```
 
 Currently we mainly support Linux with partial support for Mac and Windows:
 
-| OS      | `wall_time`          | `cpu_time`         | `memory`             | `@limit`             |
-| --      | -----------          | ----------         | --------             | --------             |
-| Linux   | :heavy_check_mark:   | :heavy_check_mark: | :heavy_check_mark:   | :heavy_check_mark:   |
-| Mac     | :heavy_check_mark:   | :heavy_check_mark: | :x: (3.)             | :grey_question: (4.) |
-| Windows | :grey_question: (1.) | :x:                | :grey_question: (2.) | :grey_question: (4.) |
+| OS      | `wall_time`             | `cpu_time`         | `memory`                | `@limit`             |
+| --      | -----------             | ----------         | --------                | --------             |
+| Linux   | :heavy_check_mark:      | :heavy_check_mark: | :heavy_check_mark:      | :heavy_check_mark:   |
+| Mac     | :heavy_check_mark:      | :heavy_check_mark: | :x: (3.)                | :grey_question: (4.) |
+| Windows | :heavy_check_mark: (1.) | :x:                | :heavy_check_mark: (2.) | :x:                  |
 
 
 1. For `Python 3.7`, there is no access to `signal.raise_signal` which we use for `Windows`
@@ -120,12 +127,13 @@ and will either fail explicitly or silently, hence we advertise it is not suppor
 However, passing a memory limit on mac is still possible but may not do anything useful or
 even raise an error.
 3. Limiting memory on Windows is done with the library `pywin32`. There seems to be installation
-issues when using `pip install <x>` inside a conda environment with `Python 3.8` and `Python 3.9`.
-The workaround is to instead install `pywin32` with conda specifically, which can be done with
-`pip uninstall pywin32; conda install pywin32`. Please see this [issue](https://github.com/mhammond/pywin32/issues/1865) for updates.
+issues when instead of using `conda install <x>`, you use `pip install <x>` inside a conda environment,
+specifically only with `Python 3.8` and `Python 3.9`. The workaround is to instead install
+`pywin32` with conda, which can be done with `pip uninstall pywin32; conda install pywin32`.
+Please see this [issue](https://github.com/mhammond/pywin32/issues/1865) for updates.
 4. Due to how multiprocessing pickling protocols work and were updated, `@limit(...)` does
-not work for your Mac/Windows with Python >= 3.8. Please use the `Pynisher` method of
-limiting resources in this case.
+not work for your Mac/Windows. Please use the `Pynisher` method of limiting resources in this case.
+(Technically this is supported for Mac Python 3.7 though)
 
 
 #### Parameters
@@ -161,7 +169,7 @@ wall_time: int | None = None
 # The errors raised in the subprocess will be the same type that are raised in
 # the controlling process. The exception to this are MemoryErrors which occur
 # in the subprocess, we convert these to MemoryLimitException.
-raise: bool = True
+raises: bool = True
 
 # This is some extra time added to the CPU time limit to enable proper cleanup
 grace_period: int = 1
