@@ -52,8 +52,7 @@ def supports_walltime() -> bool:
     elif plat.startswith("win"):
         # We don't have a way to do this yet for Python 3.7
         # Weird boolean syntax is because equality of version for >= seems to not work
-        # return not sys.version_info < (3, 8)
-        return True
+        return not sys.version_info < (3, 8)
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
 
