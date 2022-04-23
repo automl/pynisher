@@ -71,14 +71,34 @@ except MyCustomException as e:
 
 ## Details
 Pynisher works by running your function inside of a subprocess.
-Once in the subprocess, the resources will be limited and the function ran!
+Once in the subprocess, the resources will be limited for that process before running your
+function. The methods for limiting specific resources can be found within the respective
+`pynisher/limiters/<platform>.py`.
 
+#### Features
 To check what if a feature is supported on your system:
 ```python
 from pynisher import supports
 
 for limit in ["cputime", "walltime", "memory", "decorator"]:
     print(f"Supports {limit} - {supports(limit)}")
+```
+
+You can also do using `Pynisher`
+```python
+from pynisher import Pynisher
+
+# As a static method on the class
+print(Pynisher.supports("walltime"))
+
+# On the function itself
+def f() -> None:
+    ...
+
+with Pynisher(f, ...) as restricted_func:
+
+    if restricted_func.supports("memory"):
+        ...
 ```
 
 Currently we mainly support Linux with partial support for Mac and Windows:
@@ -90,8 +110,8 @@ Currently we mainly support Linux with partial support for Mac and Windows:
 | Windows | :grey_question: (1.) | :x:                | :grey_question: (2.) | :grey_question: (4.) |
 
 
-1. For `Python 3.7`, there is no access to `signal.raise_signal` which is used to trigger
-the timeout. The workaround using `os.kill(pid, signal)` doesn't seem to kill the process
+1. For `Python 3.7`, there is no access to `signal.raise_signal` which we use for `Windows`
+to trigger the timeout. The workaround using `os.kill(pid, signal)` doesn't seem to kill the process
 as intended as the process will continue to run. Seems fixable though.
 2. Mac doesn't seem to allow for limiting a processes memory. No workaround has been found
 including trying `launchctl` which seems global and ignores memory limiting. Possibly `ulimit`
@@ -100,20 +120,15 @@ and will either fail explicitly or silently, hence we advertise it is not suppor
 However, passing a memory limit on mac is still possible but may not do anything useful or
 even raise an error.
 3. Limiting memory on Windows is done with the library `pywin32`. There seems to be installation
-issues when inside a conda environment with `Python 3.8` and `Python 3.9`, using `pip install`.
-The workaround is to instead install `pywin32` with `pip uninstall pywin32; conda install pywin32`.
-This is unlikely to effect anything when `pynisher` is installed with `conda install pynisher`
-but if installing it locally, this issue will occur. Using earlier versions of `pywin32` may
-also help.
+issues when using `pip install <x>` inside a conda environment with `Python 3.8` and `Python 3.9`.
+The workaround is to instead install `pywin32` with conda specifically, which can be done with
+`pip uninstall pywin32; conda install pywin32`. Please see this [issue](https://github.com/mhammond/pywin32/issues/1865) for updates.
 4. Due to how multiprocessing pickling protocols work and were updated, `@limit(...)` does
 not work for your Mac/Windows with Python >= 3.8. Please use the `Pynisher` method of
 limiting resources in this case.
 
 
-It's important to note that the spawned subprocess will consume some initial amount of memory,
-before any limits are placed. When this initial amount is above your `memory` limit, we
-will print a warning and likely your function will crash shortly after.
-
+#### Parameters
 The full list of options available with both `Pynisher` and `@limit` are:
 ```python
 def __init__(
@@ -163,9 +178,10 @@ context: "fork" | "spawn" | "forkserver" | None = None
 warnings: bool = True
 ```
 
-## Exceptions
+#### Exceptions
 Pynisher will let all subprocess `Exceptions` buble up to the controlling process.
 If a subprocess exceeds a limit one of `CpuTimeoutException`, `WallTimeoutException` or `MemoryLimitException` are raised, but you can use their base classes to cover them more generally.
+
 ```python
 class PynisherException(Exception): ...
     """When a subprocess exceeds a limit"""
