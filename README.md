@@ -78,7 +78,7 @@ Currently we mainly support Linux with partial support for Mac:
 | OS      | `wall_time`          | `cpu_time`         | `memory`             | `@limit`             |
 | --      | -----------          | ----------         | --------             | --------             |
 | Linux   | :heavy_check_mark:   | :heavy_check_mark: | :heavy_check_mark:   | :heavy_check_mark:   |
-| Mac     | :heavy_check_mark:   | :heavy_check_mark: | :grey_question: (3.) | :grey_question: (4.) |
+| Mac     | :heavy_check_mark:   | :heavy_check_mark: | :x: (3.)             | :grey_question: (4.) |
 | Windows | :grey_question: (1.) | :x:                | :grey_question: (2.) | :grey_question: (4.) |
 
 To check what if a feature is supported on your system:
@@ -93,7 +93,10 @@ the timeout. The workaround using `os.kill(pid, signal)` doesn't seem to kill th
 as intended as the process will continue to run. Seems fixable though.
 2. Mac doesn't seem to allow for limiting a processes memory. No workaround has been found
 including trying `launchctl` which seems global and ignores memory limiting. Possibly `ulimit`
-could work but needs to be tested.
+could work but needs to be tested. Using `setrlimit(RLIMIT_AS, (soft, hard))` does nothing
+and will either fail explicitly or silently, hence we advertise it is not supported.
+However, passing a memory limit on mac is still possible but may not do anything useful or
+even raise an error.
 3. Limiting memory on Windows is done with the library `pywin32`. There seems to be installation
 issues when inside a conda environment with `Python 3.8` and `Python 3.9`, using `pip install`.
 The workaround is to instead install `pywin32` with `pip uninstall pywin32; conda install pywin32`.
@@ -111,6 +114,16 @@ will print a warning and likely your function will crash shortly after.
 
 The full list of options available with both `Pynisher` and `@limit` are:
 ```python
+def __init__(
+    name: str | None = None,
+    memory: int | tuple[int, str] | None = None,
+    cpu_time: int | None = None,
+    wall_time: int | None = None,
+    grace_period: int = 1,
+    context: str | None = None,
+    raises: bool = True,
+    warnings: bool = True,
+)
 
 # The name given to the multiprocessing.Process
 name: str | None = None
@@ -126,6 +139,13 @@ cpu_time: int | None = None
 # The wall time in seconds to limit the process to
 wall_time: int | None = None
 
+# Whether to throw any errors that occured in the subprocess to silently
+# throw them away. If `True` and an Error was raised, `None` will be returned.
+# The errors raised in the subprocess will be the same type that are raised in
+# the controlling process. The exception to this are MemoryErrors which occur
+# in the subprocess, we convert these to MemoryLimitException.
+raise: bool = True
+
 # This is some extra time added to the CPU time limit to enable proper cleanup
 grace_period: int = 1
 
@@ -133,9 +153,36 @@ grace_period: int = 1
 # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
 context: "fork" | "spawn" | "forkserver" | None = None
 
-# Whether to emit warnings form Pynisher or not, will not control warnings
-# from the restricted function
+
+# Whether to emit warnings form Pynisher or not. The current warnings:
+# * When the memory limit is lower than the starting memory of a process
+# * When trying to remove the memory limit for sending back information
+#   from the subprocess to the main process
 warnings: bool = True
+```
+
+## Exceptions
+Pynisher will let all subprocess `Exceptions` buble up to the controlling process.
+If a subprocess exceeds a limit one of `CpuTimeoutException`, `WallTimeoutException` or `MemoryLimitException` are raised, but you can use their base classes to cover them more generally.
+```python
+class PynisherException(Exception): ...
+    """When a subprocess exceeds a limit"""
+
+class TimeoutException(PynisherException): ...
+    """When a subprocess exceeds a time limit (walltime or cputime)"""
+
+class CpuTimeoutException(TimeoutException): ...
+    """When a subprocess exceeds its cpu time limit"""
+
+class WallTimeoutException(TimeoutException):
+    """When a subprocess exceeds its wall time limit"""
+
+class MemoryLimitException(PynisherException, MemoryError):
+    """When a subprocess tries to allocate memory that would take it over the limit
+
+    This also inherits from MemoryError as it is technically a MemoryError that we
+    catch and convert.
+    """
 ```
 
 ## Changes from v0.6.0
@@ -176,6 +223,8 @@ check for output `output = f(...)`. This will be `None` if an error was raised a
 
 Pynisher no longer times your function for you with `self.wall_clock_time`. If you need to measure
 the duration it ran, please do so outside of `Pynisher`.
+
+The exceptions were also changed, please see [Exceptions][#Exceptions]
 
 ## Pynisher and Multithreading
 When Pynisher is used together with the Python Threading library, it is possible to run into
