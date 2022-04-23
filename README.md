@@ -73,7 +73,15 @@ except MyCustomException as e:
 Pynisher works by running your function inside of a subprocess.
 Once in the subprocess, the resources will be limited and the function ran!
 
-Currently we mainly support Linux with partial support for Mac:
+To check what if a feature is supported on your system:
+```python
+from pynisher import supports
+
+for limit in ["cputime", "walltime", "memory", "decorator"]:
+    print(f"Supports {limit} - {supports(limit)}")
+```
+
+Currently we mainly support Linux with partial support for Mac and Windows:
 
 | OS      | `wall_time`          | `cpu_time`         | `memory`             | `@limit`             |
 | --      | -----------          | ----------         | --------             | --------             |
@@ -81,12 +89,6 @@ Currently we mainly support Linux with partial support for Mac:
 | Mac     | :heavy_check_mark:   | :heavy_check_mark: | :x: (3.)             | :grey_question: (4.) |
 | Windows | :grey_question: (1.) | :x:                | :grey_question: (2.) | :grey_question: (4.) |
 
-To check what if a feature is supported on your system:
-```python
-from pynisher import supports
-for limit in ["cputime", "walltime", "memory"]:
-    print(f"Supports {limit} - {supports(limit)}")
-```
 
 1. For `Python 3.7`, there is no access to `signal.raise_signal` which is used to trigger
 the timeout. The workaround using `os.kill(pid, signal)` doesn't seem to kill the process
