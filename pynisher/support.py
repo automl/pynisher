@@ -140,8 +140,8 @@ def supports_limit_decorator() -> bool:
     if plat.startswith("linux"):
         return True
     elif plat.startswith("win"):
-        return not (version < (3, 8))
+        return version < (3, 8)
     elif plat.startswith("darwin"):
-        return not (version < (3, 8))
+        return version < (3, 8)
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
