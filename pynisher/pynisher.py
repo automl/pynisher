@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable, TypeVar
 
 import multiprocessing
-import sys
+import platform
 from contextlib import ContextDecorator
 from functools import wraps
 
@@ -321,13 +321,13 @@ def limit(
     warnings : bool = True
         Whether to emit pynisher warnings or not.
     """  # noqa
-    if (sys.platform.startswith("win") or sys.platform.startswith("darwin")) and (
-        sys.version_info >= (3, 8)
-    ):
+    if not Pynisher.supports("decorator"):
+        version = platform.python_version_tuple()
+        plat = platform.platform()
         raise RuntimeError(
             "Due to how multiprocessing pickling works, `@limit(...)` does not"
-            f" work for {sys.platform} with Python >= 3.8. Please use the `Pynisher`"
-            " method of limiting resources."
+            f" work for {plat} with Python {version}."
+            " Please use the `Pynisher` method of limiting resources."
         )
 
     # Incase the first argument is a function, we assume it was missued

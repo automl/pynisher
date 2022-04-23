@@ -52,7 +52,7 @@ def supports_walltime() -> bool:
     elif plat.startswith("win"):
         # We don't have a way to do this yet for Python 3.7
         # Weird boolean syntax is because equality of version for >= seems to not work
-        return not sys.version_info < (3, 8)
+        return not (sys.version_info < (3, 8))
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
 
@@ -125,7 +125,7 @@ def supports_limit_decorator() -> bool:
 
     * Linx - Yes
     * Mac - Only with Python 3.7
-    * Windows - Only with Python 3.7
+    * Windows - No
 
     Check `pynisher::limit` for why
 
@@ -135,12 +135,11 @@ def supports_limit_decorator() -> bool:
         Whether using @limit is supported
     """
     plat = sys.platform.lower()
-    version = sys.version_info
     if plat.startswith("linux"):
         return True
-    elif plat.startswith("win"):
-        return version < (3, 8)
     elif plat.startswith("darwin"):
-        return version < (3, 8)
+        return sys.version_info < (3, 8)
+    elif plat.startswith("win"):
+        return False
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
