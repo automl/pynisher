@@ -137,14 +137,16 @@ class LimiterWindows(Limiter):
         job = self.job()
 
         # Get the information for the job object we created
-        enum_for_info = win32job.JobObjectBasicLimitInformation
+        enum_for_info = win32job.JobObjectExtendedLimitInformation
         info = win32job.QueryInformationJobObject(job, enum_for_info)
 
         # Set the time limit
-        info["PerJobUserTimeLimit"] = int(cpu_time * (1e-9 * 100))  # In 100ns units
+        time = int(cpu_time * (1e-9 * 100))  # In 100ns units
+        info["BasicLimitInformation"]["PerJobUserTimeLimit"] = time
 
         # Activate the flag to turn on the limiting of cput time
-        info["LimitFlags"] |= win32job.JOB_OBJECT_LIMIT_PROCESS_TIME
+        flag = win32job.JOB_OBJECT_LIMIT_PROCESS_TIME
+        info["BasicLimitInformation"]["LimitFlags"] |= flag
 
         # Finally set the new information
         win32job.SetInformationJobObject(job, enum_for_info, info)
