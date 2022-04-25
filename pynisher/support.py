@@ -4,6 +4,11 @@ import platform
 import sys
 from functools import lru_cache
 
+if sys.platform.lower().startswith("win"):
+    contexts = ["spawn"]
+else:
+    contexts = ["fork", "spawn", "forkserver"]
+
 
 @lru_cache(maxsize=None)
 def _has_pywin32() -> bool:

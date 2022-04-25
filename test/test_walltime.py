@@ -1,7 +1,7 @@
 import platform
 import time
 
-from pynisher import Pynisher, TimeoutException, supports_walltime
+from pynisher import Pynisher, TimeoutException, contexts, supports_walltime
 
 import pytest
 
@@ -19,22 +19,24 @@ def func(sleep: float) -> bool:
 
 
 @pytest.mark.parametrize("wall_time", [1, 2])
-def test_fail(wall_time: int) -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_fail(wall_time: int, context: str) -> None:
     """
     Expects
     -------
     * Should fail when the method uses more time than given
     """
     with pytest.raises(TimeoutException):
-        with Pynisher(func, wall_time=wall_time) as restricted_func:
+        with Pynisher(func, wall_time=wall_time, context=context) as restricted_func:
             restricted_func(sleep=wall_time * 2)
 
 
-def test_success() -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_success(context: str) -> None:
     """
     Expects
     -------
     * Should complete successfully if using less time than given
     """
-    with Pynisher(func, wall_time=5) as restricted_func:
+    with Pynisher(func, wall_time=5, context=context) as restricted_func:
         restricted_func(sleep=1)

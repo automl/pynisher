@@ -1,7 +1,9 @@
 """These tests ensure the API of how this can be used is enforced."""
 import os
+import time
 
-from pynisher import Pynisher
+from pynisher import EMPTY, Pynisher, contexts, supports
+from pynisher.util import memconvert
 
 import pytest
 
@@ -11,26 +13,48 @@ def subfunction() -> int:
     return os.getpid()
 
 
-def test_as_contextmanager() -> None:
+def err_function() -> None:
+    """Function that raises an error"""
+    raise RuntimeError("Error")
+
+
+def sleepy(sleep: float) -> None:
+    """Sleeps for `sleep` second"""
+    start = time.perf_counter()
+    while True:
+        duration = time.perf_counter() - start
+        if duration > sleep:
+            break
+
+
+def usememory(x: int) -> None:
+    """Use a certain amount of memory in B"""
+    bytearray(int(x))
+    return x
+
+
+@pytest.mark.parametrize("context", contexts)
+def test_as_contextmanager(context: str) -> None:
     """
     Expects
     -------
     * Should be able to use as a context manager
     """
-    with Pynisher(subfunction) as restricted_func:
+    with Pynisher(subfunction, context=context) as restricted_func:
         other_process_id = restricted_func()
 
     this_process_id = os.getpid()
     assert this_process_id != other_process_id
 
 
-def test_call() -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_call(context: str) -> None:
     """
     Expects
     -------
     * Should be able to call the restricted function
     """
-    restricted_func = Pynisher(subfunction)
+    restricted_func = Pynisher(subfunction, context=context)
 
     this_process_id = os.getpid()
     other_process_id = restricted_func()
@@ -38,13 +62,14 @@ def test_call() -> None:
     assert this_process_id != other_process_id
 
 
-def test_run() -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_run(context: str) -> None:
     """
     Expects
     -------
     * Should be able to explicitly call run on the restricted function
     """
-    pynisher = Pynisher(subfunction)
+    pynisher = Pynisher(subfunction, context=context)
 
     this_process_id = os.getpid()
     other_process_id = pynisher.run()
@@ -129,3 +154,45 @@ def test_bad_context_arg() -> None:
 
     with pytest.raises(ValueError, match=r"context"):
         Pynisher(_f, context="bad arg")
+
+
+def test_no_raise_gets_empty() -> None:
+    rf = Pynisher(err_function, raises=False)
+    result = rf()
+    assert result is EMPTY
+
+
+@pytest.mark.skipif(not supports("walltime"), reason="System doesn't support walltime")
+def test_walltime_no_raise_gets_empty() -> None:
+    """
+    Expects
+    -------
+    * No raise should return empty if there was a wall time limit reached
+    """
+    rf = Pynisher(err_function, wall_time=1, raises=False)
+    result = rf()
+    assert result is EMPTY
+
+
+@pytest.mark.skipif(not supports("walltime"), reason="System doesn't support cputime")
+def test_cputime_no_raise_gets_empty() -> None:
+    """
+    Expects
+    -------
+    * No raise should return empty if there was a cputime out
+    """
+    rf = Pynisher(sleepy, cpu_time=1, raises=False)
+    result = rf(10000)
+    assert result is EMPTY
+
+
+@pytest.mark.skipif(not supports("memory"), reason="System doesn't support memory")
+def test_memory_no_raise_gets_empty() -> None:
+    """
+    Expects
+    -------
+    * No raise should return empty if there was a memort limit reached
+    """
+    rf = Pynisher(usememory, memory=(1, "B"), raises=False)
+    result = rf(memconvert(1, frm="mb"))
+    assert result is EMPTY

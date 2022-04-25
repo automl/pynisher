@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Callable, TypeVar
 
 import multiprocessing
-import platform
 from contextlib import ContextDecorator
 from functools import wraps
 
@@ -17,11 +16,11 @@ from pynisher.support import supports
 from pynisher.util import callstring, memconvert
 
 
-class EMPTY:
+class _EMPTY:
     """An indicator of no result, followings `inspect._empty` pattern"""
 
 
-_empty = EMPTY()
+EMPTY = _EMPTY()
 
 
 # After a process has return a result or has been terminated, we
@@ -200,8 +199,8 @@ class Pynisher(ContextDecorator):
         # * (result, None)          | success
         # * None, (err, traceback)  | failed, error raised (cputime, mem, any error)
         # * None                    | failed, MemoryError during sending of above error
-        # * _empty                  | failed, nothing received from pipe (walltime)
-        response = _empty
+        # * EMPTY                   | failed, nothing received from pipe (walltime)
+        response = EMPTY
 
         # Let loose
         subprocess.start()
@@ -217,7 +216,7 @@ class Pynisher(ContextDecorator):
                 #   This gives us a platform independant implementation for wall_time
                 response = receive_pipe.recv()
             else:
-                response = _empty
+                response = EMPTY
 
                 # Wall time elapsed, terminate the process
                 subprocess.terminate()
@@ -227,7 +226,7 @@ class Pynisher(ContextDecorator):
             # and the other end was closed. Probably not needed but good to have incase
             # See:
             # * https://docs.python.org/3/library/multiprocessing.html#multiprocessing.connection.Connection.recv  # noqa
-            response = _empty
+            response = EMPTY
 
         finally:
             # Join up the subprocess if it's still alive somehow
@@ -236,10 +235,10 @@ class Pynisher(ContextDecorator):
             send_pipe.close()
 
         # If we never got a response, it was a WallTimeoutException
-        if isinstance(response, EMPTY):
+        if isinstance(response, _EMPTY):
 
             if not self.raises:
-                return _empty
+                return EMPTY
 
             raise WallTimeoutException(
                 f"Did not finish in time ({self.wall_time}s)"
@@ -250,7 +249,7 @@ class Pynisher(ContextDecorator):
         if response is None:
 
             if not self.raises:
-                return _empty
+                return EMPTY
 
             raise MemoryLimitException(
                 "Sending the results/err from the subprocess caused a memory error."
@@ -261,6 +260,7 @@ class Pynisher(ContextDecorator):
         # We got something back through the pipe, lets see what it is
         result, error = response
 
+        print(response)
         # We got a result, yay, return it
         # We can't check for `result is not None` as `None` is a valid thing
         # that a restricted function could return, hence we check for the precense
@@ -388,13 +388,14 @@ def limit(
     warnings : bool = True
         Whether to emit pynisher warnings or not.
     """  # noqa
-    if not Pynisher.supports("decorator"):
-        version = platform.python_version_tuple()
-        plat = platform.platform()
-        raise RuntimeError(
+    ctx = multiprocessing.get_start_method() if context is None else context
+
+    if ctx == "spawn":
+        raise ValueError(
             "Due to how multiprocessing pickling works, `@limit(...)` does not"
-            f" work for {plat} with Python {version}."
-            " Please use the `Pynisher` method of limiting resources."
+            " work with 'spawn' context. Please use the `Pynisher` method of limiting"
+            " resources or change the context. Windows only has 'spawn' available and"
+            " this is the default on Mac from Python 3.8 onwards"
         )
 
     # Incase the first argument is a function, we assume it was missued

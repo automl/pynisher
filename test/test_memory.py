@@ -1,6 +1,6 @@
 import platform
 
-from pynisher import MemoryLimitException, Pynisher, supports
+from pynisher import MemoryLimitException, Pynisher, contexts, supports
 from pynisher.util import Monitor, memconvert
 
 import pytest
@@ -19,11 +19,12 @@ def usememory(x: int) -> None:
 
 
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])
-def test_fail(limit: int) -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_fail(limit: int, context: str) -> None:
     """Using more than the allocated memory should raise an Error"""
     allocate = limit * 3
 
-    restricted_func = Pynisher(usememory, memory=(limit, "MB"))
+    restricted_func = Pynisher(usememory, memory=(limit, "MB"), context=context)
 
     with pytest.raises(MemoryLimitException):
         allocation_bytes = memconvert(allocate, frm="MB", to="B")
@@ -31,7 +32,8 @@ def test_fail(limit: int) -> None:
 
 
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])
-def test_success(limit: int) -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_success(limit: int, context: str) -> None:
     """Using less than the allocated memory should be fine
 
     Processes take up some amount of memory natively, e.g. 37MB was preallocated
@@ -52,7 +54,7 @@ def test_success(limit: int) -> None:
         )
         pytest.skip(msg)
 
-    restricted_func = Pynisher(usememory, memory=(limit, "MB"))
+    restricted_func = Pynisher(usememory, memory=(limit, "MB"), context=context)
 
     allocation_bytes = memconvert(allocate, frm="MB", to="B")
     restricted_func(allocation_bytes)
