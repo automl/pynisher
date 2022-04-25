@@ -33,7 +33,7 @@ def supports_walltime() -> bool:
 
     * Linux - Yes
     * Darwin - Yes
-    * Windows - Yes if Python version > 3.7
+    * Windows - Yes
 
     Check respective "pynisher/limiters/<platform>.py"
 
@@ -50,8 +50,7 @@ def supports_walltime() -> bool:
         # Yup, also works
         return True
     elif plat.startswith("win"):
-        # We don't have a way to do this yet for Python 3.7
-        # Weird boolean syntax is because equality of version for >= seems to not work
+        # Yay, they all work
         return True
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
