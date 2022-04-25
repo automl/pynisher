@@ -29,6 +29,23 @@ else:
         signal.raise_signal(walltime_signal)
 
 
+_win32_import_error_msg = """
+Couldn't limit `memory` as `pywin32` failed to import.
+
+If using a Conda environment with Python 3.8 or 3.9 and you installed `pynisher`
+or a package relying on `pynisher` with `pip` you must install `pywin32`
+with `conda` manually:
+
+* `conda install pywin32`.
+
+Please see this issue for more:
+* https://github.com/mhammond/pywin32/issues/1865
+
+pywin32
+* https://github.com/mhammond/pywin32
+"""
+
+
 class LimiterWindows(Limiter):
     @staticmethod
     def _handler(signum: int, frame: Any | None) -> Any:
@@ -58,24 +75,7 @@ class LimiterWindows(Limiter):
             import win32job
             import winerror
         except ModuleNotFoundError as e:
-            msg = (
-                "Couldn't limit `memory` as `pywin32` failed to import."
-                " If using a Conda environment with Python 3.8 or 3.9 and you installed"
-                " `pynisher` or a package relying on `pynisher` with `pip`"
-                " you must install `pywin32` with `conda` manually:"
-                "\n"
-                "\n * `conda install pywin32`."
-                "\n"
-                "\n Please see this issue for more:"
-                "\n"
-                "\n * https://github.com/mhammond/pywin32/issues/1865"
-                "\n"
-                "\n pywin32"
-                "\n"
-                "\n * https://github.com/mhammond/pywin32"
-                "\n"
-            )
-            raise ModuleNotFoundError(msg) from e
+            raise ModuleNotFoundError(_win32_import_error_msg) from e
 
         # Here, we assign it to a windows "Job", whatever that is
         # If the process is already assigned to a job, then we have
@@ -121,7 +121,53 @@ class LimiterWindows(Limiter):
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit's the cpu time of this process."""
-        raise NotImplementedError("Not implemented for Windows")
+        # First try to import stuff, an easy exception to catch and give good
+        # information about
+        try:
+            import win32api
+            import win32job
+            import winerror
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(_win32_import_error_msg) from e
+
+        # Here, we assign it to a windows "Job", whatever that is
+        # If the process is already assigned to a job, then we have
+        # to check if it's less than Windows 8 because apparently
+        # nested jobs aren't supported there
+        try:
+            job = win32job.CreateJobObject(None, "")
+            process = win32api.GetCurrentProcess()
+
+            win32job.AssignProcessToJobObject(job, process)
+
+        except win32job.error as e:
+            if (
+                e.winerror != winerror.ERROR_ACCESS_DENIED
+                or sys.getwindowsversion() >= (6, 2)  # type: ignore
+                or not win32job.IsProcessInJob(process, None)
+            ):
+                raise e
+            else:
+                msg = (
+                    "The process is already in a job."
+                    " Nested jobs are not supported prior to Windows 8."
+                )
+                raise RuntimeError(msg) from e
+
+        # Get the information for the job object we created
+        enum_for_info = win32job.JobObjectBasicLimitInformation
+        info = win32job.QueryInformationJobObject(job, enum_for_info)
+
+        # Set the time limit
+        time = int(cpu_time * (1e-9 * 100))  # In 100ns intervals
+        info["PerProcessUserTimeLimit"] = time
+
+        # Activate the flag to turn on the limiting
+        mask_limit_cputime = win32job.JOB_OBJECT_LIMIT_PROCESS_TIME
+        info["BasicLimitInformation"]["LimitFlags"] |= mask_limit_cputime
+
+        # Finally set the new information
+        win32job.SetInformationJobObject(job, enum_for_info, info)
 
     def limit_wall_time(self, wall_time: int) -> None:
         """Limit's the wall time of this process."""

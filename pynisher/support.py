@@ -1,5 +1,22 @@
+from __future__ import annotations
+
 import platform
 import sys
+
+SUPPORTS_PYWIN32 = None
+
+
+def _has_pywin32() -> bool:
+    """Check if system has pywin32 accessible"""
+    if SUPPORTS_PYWIN32 is None:  # noqa
+        try:
+            import win32api  # noqa
+
+            SUPPORTS_PYWIN32 = True
+        except Exception:
+            SUPPORTS_PYWIN32 = False
+
+    return SUPPORTS_PYWIN32
 
 
 def supports(limit: str) -> bool:
@@ -61,7 +78,7 @@ def supports_cputime() -> bool:
 
     * Linux - Yes
     * Darwin - Yes
-    * Windows - No
+    * Windows - Yes
 
     Check respective "pynisher/limiters/<platform>.py"
 
@@ -78,8 +95,8 @@ def supports_cputime() -> bool:
         # Yup, also works
         return True
     elif plat.startswith("win"):
-        # We don't have a way to do this yet
-        return False
+        # Yup, we can do so with pywin32
+        return _has_pywin32()
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
 
@@ -109,12 +126,7 @@ def supports_memory() -> bool:
 
     elif plat.startswith("win"):
         # Only supported if we can successfuly import `pywin32` modules
-        try:
-            import win32api  # noqa
-
-            return True
-        except Exception:
-            return False
+        return _has_pywin32()
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
 
