@@ -123,6 +123,7 @@ class LimiterWindows(Limiter):
         info["BasicLimitInformation"]["LimitFlags"] |= mask_limit_memory
 
         # Finally set the new information
+        print(info)
         win32job.SetInformationJobObject(job, enum_for_info, info)
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
@@ -137,18 +138,19 @@ class LimiterWindows(Limiter):
         job = self.job()
 
         # Get the information for the job object we created
-        enum_for_info = win32job.JobObjectExtendedLimitInformation
+        enum_for_info = win32job.JobObjectBasicLimitInformation
         info = win32job.QueryInformationJobObject(job, enum_for_info)
 
         # Set the time limit
         time = int(cpu_time * 10_000_000)  # In 100ns units (1e+9 / 100)
-        info["BasicLimitInformation"]["PerJobUserTimeLimit"] = time
+        info["PerJobUserTimeLimit"] = time
 
         # Activate the flag to turn on the limiting of cput time
-        flag = win32job.JOB_OBJECT_LIMIT_PROCESS_TIME
-        info["BasicLimitInformation"]["LimitFlags"] |= flag
+        flag = win32job.JOB_OBJECT_LIMIT_JOB_TIME
+        info["LimitFlags"] |= flag
 
         # Finally set the new information
+        print(info)
         win32job.SetInformationJobObject(job, enum_for_info, info)
 
     def _try_remove_memory_limit(self) -> bool:
