@@ -292,8 +292,7 @@ class Pynisher(ContextDecorator):
             raise MemoryLimitException(msg) from err
 
         # We don't know what it is, could be an issue in the function call
-        msg = f"Process failed with the below traceback\n\n{tb}\n\n"
-        raise err.__class__(msg) from err
+        raise err.__class__(tb) from err
 
     @staticmethod
     def supports(limit: str) -> bool:
