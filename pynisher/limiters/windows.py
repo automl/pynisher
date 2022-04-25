@@ -5,29 +5,9 @@ from typing import Any
 import signal
 import sys
 import traceback
-from threading import Timer
 
 from pynisher.exceptions import WallTimeoutException
 from pynisher.limiters.limiter import Limiter
-
-# `signal.raise_signal` is only available in  >= 3.8
-if sys.version_info < (3, 8):
-    import os
-
-    walltime_signal = signal.SIGBREAK  # type: ignore
-
-    def emit_sigterm() -> None:
-        """Emit a SIGTERM using os.kill as `raise_signal` in 3.8"""
-        os.kill(os.getpid(), walltime_signal)  # type: ignore
-
-else:
-
-    walltime_signal = signal.SIGTERM  # type: ignore
-
-    def emit_sigterm() -> None:
-        """Emit a SIGTERM"""
-        signal.raise_signal(walltime_signal)
-
 
 _win32_import_error_msg = """
 Couldn't limit `memory` as `pywin32` failed to import.
@@ -161,24 +141,13 @@ class LimiterWindows(Limiter):
         info = win32job.QueryInformationJobObject(job, enum_for_info)
 
         # Set the time limit
-        info["PerProcessUserTimeLimit"] = int(cpu_time * (1e-9 * 100))  # In 100ns units
+        info["PerJobUserTimeLimit"] = int(cpu_time * (1e-9 * 100))  # In 100ns units
 
         # Activate the flag to turn on the limiting of cput time
         info["LimitFlags"] |= win32job.JOB_OBJECT_LIMIT_PROCESS_TIME
 
         # Finally set the new information
         win32job.SetInformationJobObject(job, enum_for_info, info)
-
-    def limit_wall_time(self, wall_time: int) -> None:
-        """Limit's the wall time of this process."""
-        signal.signal(walltime_signal, LimiterWindows._handler)
-        timer = Timer(wall_time, emit_sigterm)
-        timer.start()
-
-        # Setting this attribute is hacky and specific to Windows
-        # but we need to stop the timer if the function returned
-        # in time. This is done in Limiter.__call__
-        self.timer = timer
 
     def _try_remove_memory_limit(self) -> bool:
         """Remove memory limit if it can"""
