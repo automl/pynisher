@@ -26,8 +26,8 @@ env:
   test-dir: test
   extra-requires: "[test]"  # "" for no extra_requires
 
-  # Arguments used for pytest
-  pytest-args: >-
+  # Arguments used for pytest, appended to the ones in pyproject.yaml
+  pytest-extra-args: >-
     -v
 
 jobs:
@@ -71,7 +71,7 @@ jobs:
     - name: Tests
       timeout-minutes: 5
       run: |
-        pytest ${{ env.pytest-args }} ${{ env.test-dir }}
+        pytest ${{ env.pytest-extra-args }} ${{ env.test-dir }}
 
     - name: Check for files left behind by test
       run: |

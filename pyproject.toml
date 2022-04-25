@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 testpaths = ["test"]
 minversion = "3.7"
-# addopts = "--cov=pynisher -sv"
+addopts = "-ra"
 
 [tool.coverage.run]
 branch = true
