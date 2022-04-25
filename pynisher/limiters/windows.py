@@ -6,7 +6,7 @@ import signal
 import sys
 import traceback
 
-from pynisher.exceptions import WallTimeoutException
+from pynisher.exceptions import CpuTimeoutException
 from pynisher.limiters.limiter import Limiter
 
 _win32_import_error_msg = """
@@ -84,11 +84,11 @@ class LimiterWindows(Limiter):
     def _handler(signum: int, frame: Any | None) -> Any:
         # SIGTERM: wall time
         #
-        #   For windows, we don't have access to any specific signals.
-        #   The only signal we explicitly can handle is SIGTERM which
-        #   is a generic signal to terminate a process
-        if signum == signal.SIGTERM or signum == signal.SIGBREAK:  # type: ignore
-            raise WallTimeoutException
+        # We should only limit to SIGTERM as this is the only signal that
+        # makes sense that would be sent to the process when the Job has it's
+        # cpu time limit reached
+        if signum == signal.SIGTERM:  # type: ignore
+            raise CpuTimeoutException
 
         # UNKNOWN
         #

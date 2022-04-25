@@ -18,7 +18,7 @@ import resource
 import signal
 import traceback
 
-from pynisher.exceptions import CpuTimeoutException, TimeoutException
+from pynisher.exceptions import CpuTimeoutException
 from pynisher.limiters.limiter import Limiter
 
 
@@ -32,15 +32,6 @@ class LimiterMac(Limiter):
         #   The default handler would just kill the process
         if signum == signal.SIGXCPU:
             raise CpuTimeoutException
-
-        # SIGALRM `signal.alarm(wall_time)`
-        #
-        #   When the alarm uses `wall_time`, SIGALARM will be sent.
-        #   It has no default action
-        elif signum == signal.SIGALRM:
-            # SIGALRM is sent to process when the specified time limit to an alarm
-            # function elapses (when real or clock time elapses)
-            raise TimeoutException
 
         # UNKNOWN
         #
@@ -94,20 +85,6 @@ class LimiterMac(Limiter):
 
         resource.setrlimit(resource.RLIMIT_CPU, (soft, hard))
         signal.signal(signal.SIGXCPU, LimiterMac._handler)
-
-    def limit_wall_time(self, wall_time: int) -> None:
-        """Limit the wall time for this process
-
-        A SIGALARM will be sent to the handler once `wall_time` amount
-        of seconds has elapsed since the invocation of `signal.alarm(wall_time)`.
-
-        Parameters
-        ----------
-        wall_time : int
-            The amount of time to limit to in seconds
-        """
-        signal.signal(signal.SIGALRM, LimiterMac._handler)
-        signal.alarm(wall_time)
 
     def _try_remove_memory_limit(self) -> bool:
         """Try to remove the memory limit if possible
