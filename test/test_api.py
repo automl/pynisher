@@ -33,6 +33,11 @@ def usememory(x: int) -> None:
     return x
 
 
+def return_none() -> None:
+    """Just returns None to make sure we pass it back correctly"""
+    return None
+
+
 @pytest.mark.parametrize("context", contexts)
 def test_as_contextmanager(context: str) -> None:
     """
@@ -157,6 +162,11 @@ def test_bad_context_arg() -> None:
 
 
 def test_no_raise_gets_empty() -> None:
+    """
+    Expects
+    -------
+    * Setting `raises=False` on a function that raises should return EMPTY
+    """
     rf = Pynisher(err_function, raises=False)
     result = rf()
     assert result is EMPTY
@@ -196,3 +206,15 @@ def test_memory_no_raise_gets_empty() -> None:
     rf = Pynisher(usememory, memory=(1, "B"), raises=False)
     result = rf(memconvert(1, frm="mb"))
     assert result is EMPTY
+
+
+def test_func_can_return_none() -> None:
+    """
+    Expects
+    -------
+    * A function return None should recieve None as the answer, making sure
+      we don't accidentally eat it while processing everything.
+    """
+    rf = Pynisher(return_none)
+    result = rf()
+    assert result is None
