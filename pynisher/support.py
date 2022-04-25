@@ -2,21 +2,18 @@ from __future__ import annotations
 
 import platform
 import sys
+from functools import lru_cache
 
-SUPPORTS_PYWIN32 = None
 
-
+@lru_cache(maxsize=None)
 def _has_pywin32() -> bool:
     """Check if system has pywin32 accessible"""
-    if SUPPORTS_PYWIN32 is None:  # noqa
-        try:
-            import win32api  # noqa
+    try:
+        import win32api  # noqa
 
-            SUPPORTS_PYWIN32 = True
-        except Exception:
-            SUPPORTS_PYWIN32 = False
-
-    return SUPPORTS_PYWIN32
+        return True
+    except Exception:
+        return False
 
 
 def supports(limit: str) -> bool:
