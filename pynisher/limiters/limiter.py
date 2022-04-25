@@ -100,7 +100,8 @@ class Limiter(ABC):
                 self.limit_cpu_time(self.cpu_time, grace_period=self.grace_period)
 
             if self.wall_time is not None:
-                self.limit_wall_time(self.wall_time)
+                pass
+                # self.limit_wall_time(self.wall_time)
 
             # Call our function and if there are no exceptions raised, default to
             # no error or trace
@@ -138,6 +139,9 @@ class Limiter(ABC):
                 if self._try_remove_memory_limit():
                     self.output.send((None, error))
                 else:
+                    # We return None as it's only 16B, smallest object
+                    # that makes sense.
+                    # import sys; sys.getsizeof(None)
                     self.output.send(None)
 
         finally:

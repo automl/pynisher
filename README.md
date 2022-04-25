@@ -113,27 +113,31 @@ Currently we mainly support Linux with partial support for Mac and Windows:
 | OS      | `wall_time`             | `cpu_time`         | `memory`                | `@limit`             |
 | --      | -----------             | ----------         | --------                | --------             |
 | Linux   | :heavy_check_mark:      | :heavy_check_mark: | :heavy_check_mark:      | :heavy_check_mark:   |
-| Mac     | :heavy_check_mark:      | :heavy_check_mark: | :x: (3.)                | :grey_question: (4.) |
+| Mac     | :heavy_check_mark:      | :heavy_check_mark: | :x: (3.)                | :x: (4.)             |
 | Windows | :heavy_check_mark: (1.) | :x:                | :heavy_check_mark: (2.) | :x:                  |
 
 
 1. For `Python 3.7`, there is no access to `signal.raise_signal` which we use for `Windows`
 to trigger the timeout. The workaround using `os.kill(pid, signal)` doesn't seem to kill the process
 as intended as the process will continue to run. Seems fixable though.
+
 2. Mac doesn't seem to allow for limiting a processes memory. No workaround has been found
 including trying `launchctl` which seems global and ignores memory limiting. Possibly `ulimit`
 could work but needs to be tested. Using `setrlimit(RLIMIT_AS, (soft, hard))` does nothing
 and will either fail explicitly or silently, hence we advertise it is not supported.
 However, passing a memory limit on mac is still possible but may not do anything useful or
 even raise an error.
+
 3. Limiting memory on Windows is done with the library `pywin32`. There seems to be installation
 issues when instead of using `conda install <x>`, you use `pip install <x>` inside a conda environment,
 specifically only with `Python 3.8` and `Python 3.9`. The workaround is to instead install
 `pywin32` with conda, which can be done with `pip uninstall pywin32; conda install pywin32`.
 Please see this [issue](https://github.com/mhammond/pywin32/issues/1865) for updates.
+
 4. Due to how multiprocessing pickling protocols work and were updated, `@limit(...)` does
 not work for your Mac/Windows. Please use the `Pynisher` method of limiting resources in this case.
-(Technically this is supported for Mac Python 3.7 though)
+(Technically this is supported for Mac Python 3.7 though). This is likely due to the default
+`spawn` context for Windows and Mac, while for Linux, the `fork` context seems to work.
 
 
 #### Parameters

@@ -7,10 +7,27 @@ import platform
 from contextlib import ContextDecorator
 from functools import wraps
 
-from pynisher.exceptions import MemoryLimitException
+from pynisher.exceptions import (
+    CpuTimeoutException,
+    MemoryLimitException,
+    WallTimeoutException,
+)
 from pynisher.limiters import Limiter
 from pynisher.support import supports
-from pynisher.util import memconvert
+from pynisher.util import callstring, memconvert
+
+
+class EMPTY:
+    """An indicator of no result, followings `inspect._empty` pattern"""
+
+
+_empty = EMPTY()
+
+
+# After a process has return a result or has been terminated, we
+# give it `SAFE_JOIN_TIME` seconds to try clean up if it hasn't already
+# returned
+SAFE_JOIN_TIME = 5
 
 
 class Pynisher(ContextDecorator):
@@ -28,6 +45,7 @@ class Pynisher(ContextDecorator):
         context: str | None = None,
         raises: bool = True,
         warnings: bool = True,
+        join_time: int | None = None,
     ) -> None:
         """
         Parameters
@@ -153,10 +171,10 @@ class Pynisher(ContextDecorator):
         # We can safely ignore the input pipe as we do not feed data through
         # to the pipe. The output pipe will be used by the subprocess to communicate
         # the result back.
-        recieve_pipe, send_pipe = self.context.Pipe(duplex=False)
+        receive_pipe, send_pipe = self.context.Pipe(duplex=False)
 
         # The limiter is in charge of limiting resources once inside the subprocess
-        # It gets the `recieve_pipe` through which it it should `output` it's results to
+        # It gets the `receive_pipe` through which it it should `output` it's results to
         limiter = Limiter.create(
             func=self.func,
             output=send_pipe,
@@ -177,55 +195,105 @@ class Pynisher(ContextDecorator):
             name=self.name,
         )
 
-        process_error = None
-        result = None
+        # 4 kinds of `response`
+        #
+        # * (result, None)          | success
+        # * None, (err, traceback)  | failed, error raised (cputime, mem, any error)
+        # * None                    | failed, MemoryError during sending of above error
+        # * _empty                  | failed, nothing received from pipe (walltime)
+        response = _empty
 
-        # Let loose and hope it doesn't raise
+        # Let loose
         subprocess.start()
 
         try:
-            # Will block here until 1 of 3 results is given back from the subprocess
-            # * result, None            | success
-            # * None, (err, traceback)  | failed
-            # * None                    | failed due to MemoryError during sending error
-            packet = recieve_pipe.recv()
 
-            if packet is None:
-                raise MemoryLimitException(
-                    "Sending the error from the subprocess caused a memory issue"
-                )
+            if self.wall_time is None:
+                # Block here until we get a response
+                response = receive_pipe.recv()
+            elif receive_pipe.poll(self.wall_time):
+                # `wall_time`
+                #   We can block with `poll` with a timeout of `wall_time` seconds
+                #   This gives us a platform independant implementation for wall_time
+                response = receive_pipe.recv()
+            else:
+                response = _empty
 
-            result, process_error = packet
+                # Wall time elapsed, terminate the process
+                subprocess.terminate()
 
         except EOFError:
-            # This is raised when there is nothing left in the pipe to recieve
-            # and the other end was closed. Should be fine without it but it's
-            # some good extra backup
-            pass
+            # This is raised when there is nothing left in the pipe to receive
+            # and the other end was closed. Probably not needed but good to have incase
+            # See:
+            # * https://docs.python.org/3/library/multiprocessing.html#multiprocessing.connection.Connection.recv  # noqa
+            response = _empty
 
-        # Block here until the subprocess has joined back up, this should be almost
-        # immediatly after sending back the result through `recv`
-        subprocess.join()
+        finally:
+            # Join up the subprocess if it's still alive somehow
+            subprocess.join(timeout=SAFE_JOIN_TIME)
+            receive_pipe.close()
+            send_pipe.close()
 
-        # send_pipe should be closed by the subprocess but just incase, close anyways
-        send_pipe.close()
-        recieve_pipe.close()
+        # If we never got a response, it was a WallTimeoutException
+        if isinstance(response, EMPTY):
 
-        # If we are allowed to raise, we raise a new exception here to get a traceback
-        # from this master process.
-        if process_error is not None and self.raises:
-            suberr, tb = process_error
+            if not self.raises:
+                return _empty
 
-            if isinstance(suberr, MemoryError):
-                errcls = MemoryLimitException
-            else:
-                errcls = suberr.__class__
+            raise WallTimeoutException(
+                f"Did not finish in time ({self.wall_time}s)"
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
 
-            # We create an error of the same type and append the subprocess traceback
-            msg = f"Process failed with the below traceback\n\n{tb}"
-            raise errcls(msg) from suberr
+        # We got a response from the subprocess but it had no memory to do a send
+        if response is None:
 
-        return result
+            if not self.raises:
+                return _empty
+
+            raise MemoryLimitException(
+                "Sending the results/err from the subprocess caused a memory error."
+                f" Could not retrieve a traceback or cause from subprocess."
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+
+        # We got something back through the pipe, lets see what it is
+        result, error = response
+
+        # We got a result, yay, return it
+        # We can't check for `result is not None` as `None` is a valid thing
+        # that a restricted function could return, hence we check for the precense
+        # of an error
+        if error is None:
+            return result
+
+        # There was some sort of error, but we shouldn't raise, give EMPTY
+        if not self.raises:
+            return EMPTY
+
+        # Handle the error
+        err, tb = error
+
+        # It was a cpu timeout triggered
+        if self.cpu_time is not None and isinstance(err, CpuTimeoutException):
+            msg = (
+                f"Did not finish in cpu time ({self.cpu_time}s)"
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+            raise CpuTimeoutException(msg) from err
+
+        # It was a memory error
+        if self.memory is not None and isinstance(err, MemoryError):
+            msg = (
+                f"Exceeded memory limit ({self.memory}s)"
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+            raise MemoryLimitException(msg) from err
+
+        # We don't know what it is, could be an issue in the function call
+        msg = f"Process failed with the below traceback\n\n{tb}\n\n"
+        raise err.__class__(msg) from err
 
     @staticmethod
     def supports(limit: str) -> bool:

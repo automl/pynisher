@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Callable
+
 import psutil
 from psutil import Process
 
@@ -41,6 +43,26 @@ def memconvert(x: float, *, frm: str = "B", to: str = "B") -> float:
         return int(as_target)
     else:
         return as_target
+
+
+def callstring(f: Callable, *args: Any, **kwargs: Any) -> str:
+    """Get a string of the function being called with the args and kwargs
+
+    Parameters
+    ----------
+    f: Callable
+        The function
+
+    *args, **kwargs
+
+    Returns
+    -------
+    str
+        The function call as a str
+    """
+    parts = list(map(str, args)) + [f"{k}={v}" for k, v in kwargs.items()]
+    param_str = ", ".join(parts)
+    return f"{f.__name__}({param_str})"
 
 
 class Monitor:
