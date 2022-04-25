@@ -13,7 +13,7 @@ if not supports("memory"):
 
 
 def usememory(x: int) -> None:
-    """Use a certain amount of memory in MB"""
+    """Use a certain amount of memory in B"""
     bytearray(int(x))
     return
 
@@ -35,7 +35,9 @@ def test_success(limit: int) -> None:
     """Using less than the allocated memory should be fine
 
     Processes take up some amount of memory natively, e.g. 37MB was preallocated
-    for my own run. Hence, we skip if the test limit is not enough
+    for my own run on Linx where "fork" is used.
+
+    Hence, we skip if the test limit is not enough
     """
     allocate = limit / 3
 
