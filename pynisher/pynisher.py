@@ -82,9 +82,6 @@ class Pynisher(ContextDecorator):
         warnings : bool = True
             Whether to emit pynisher warnings or not.
         """  # noqa
-        if wall_time is not None and cpu_time is not None:
-            raise ValueError("You may only set either `wall_time` or `cpu_time`")
-
         if isinstance(cpu_time, tuple):
             x, unit = cpu_time
             cpu_time = round(timeconvert(x, frm=unit))
