@@ -41,7 +41,6 @@ class Pynisher(ContextDecorator):
         context: str | None = None,
         raises: bool = True,
         warnings: bool = True,
-        join_time: int | None = None,
     ) -> None:
         """
         Parameters
@@ -80,7 +79,7 @@ class Pynisher(ContextDecorator):
         raises : bool = True
             Whether any error from the subprocess should filter up and be raised.
 
-        warnings : bool
+        warnings : bool = True
             Whether to emit pynisher warnings or not.
         """  # noqa
         if wall_time is not None and cpu_time is not None:
