@@ -225,6 +225,7 @@ class Pynisher(ContextDecorator):
         # * >0          | Process was terminated non-gracefully, nothing in the pipe
         #               | and it may not be closed
         exitcode = subprocess.exitcode
+        print("exitcode", exitcode)
 
         # Wall time expired
         if exitcode is None:
@@ -245,6 +246,7 @@ class Pynisher(ContextDecorator):
                 # If there is data, it will be read
                 try:
                     response = receive_pipe.recv()
+                    print("poll", response)
                     if response is None:
                         result = EMPTY
                         err = MemoryLimitException(
@@ -282,6 +284,7 @@ class Pynisher(ContextDecorator):
 
         # We shouldn't get here
         else:
+            print("nope")
             result = EMPTY
             err = PynisherException(
                 f"Unknown reason for exitcode {exitcode} and killed process"

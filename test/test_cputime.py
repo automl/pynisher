@@ -37,7 +37,7 @@ def test_success(context: str) -> None:
     * Should raise no error and execute te function
     """
     with Pynisher(func, cpu_time=3, context=context) as restricted_func:
-        restricted_func(2)
+        print(restricted_func(2))
 
 
 @pytest.mark.parametrize("cpu_time", [1, 2])
@@ -59,4 +59,4 @@ def test_fail(cpu_time: int, grace_period: int, context: str) -> None:
             context=context,
         ) as rf:
             over_limit = cpu_time + grace_period + 1
-            rf(over_limit)
+            print(rf(over_limit))
