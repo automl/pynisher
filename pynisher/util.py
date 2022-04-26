@@ -42,7 +42,7 @@ def memconvert(x: float, *, frm: str = "B", to: str = "B") -> float:
 
     # We can't see a use case for float Bytes
     if to.upper() == "B":
-        return int(as_target)
+        return round(as_target)
     else:
         return as_target
 

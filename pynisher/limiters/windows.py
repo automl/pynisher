@@ -149,7 +149,7 @@ class LimiterWindows(Limiter):
         info = win32job.QueryInformationJobObject(job, enum_for_info)
 
         # Set the time limit
-        time = int(cpu_time * 10_000_000)  # In 100ns units (1e+9 / 100)
+        time = round(cpu_time * 10_000_000)  # In 100ns units (1e+9 / 100)
         info["PerProcessUserTimeLimit"] = time
 
         # Activate the flag to turn on the limiting of cput time

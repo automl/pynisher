@@ -92,15 +92,15 @@ class Pynisher(ContextDecorator):
 
         if isinstance(cpu_time, tuple):
             x, unit = cpu_time
-            cpu_time = int(timeconvert(x, frm=unit))
+            cpu_time = round(timeconvert(x, frm=unit))
 
         if isinstance(wall_time, tuple):
             x, unit = wall_time
-            wall_time = int(timeconvert(x, frm=unit))
+            wall_time = round(timeconvert(x, frm=unit))
 
         if isinstance(memory, tuple):
             x, unit = memory
-            memory = int(memconvert(x, frm=unit))
+            memory = round(memconvert(x, frm=unit))
 
         if not callable(func):
             raise ValueError(f"`func` ({func}) must be callable")
