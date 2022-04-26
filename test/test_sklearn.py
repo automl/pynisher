@@ -33,7 +33,7 @@ def train_svc(n_samples: int, n_features: int) -> None:
 
 constraints_with_exceptions = [
     (CpuTimeoutException, {"cpu_time": (1, "s")}),
-    (MemoryLimitException, {"memory": (1, "B")}),
+    (MemoryLimitException, {"memory": (500, "kB")}),
     (WallTimeoutException, {"wall_time": (1, "s")}),
 ]
 
