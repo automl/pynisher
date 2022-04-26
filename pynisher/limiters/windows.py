@@ -123,7 +123,6 @@ class LimiterWindows(Limiter):
         info["BasicLimitInformation"]["LimitFlags"] |= mask_limit_memory
 
         # Finally set the new information
-        print(info)
         win32job.SetInformationJobObject(job, enum_for_info, info)
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
@@ -158,7 +157,6 @@ class LimiterWindows(Limiter):
         info["LimitFlags"] |= flag
 
         # Finally set the new information
-        print(info)
         win32job.SetInformationJobObject(job, enum_for_info, info)
 
     def _try_remove_memory_limit(self) -> bool:

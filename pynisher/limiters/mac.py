@@ -43,14 +43,10 @@ class LimiterMac(Limiter):
     def limit_memory(self, memory: int) -> None:
         """Limit the addressable memory
 
-        This could technically raise `SIGSEGV` (segmentation fault) but
-        we instead catch a python `MemoryError` as indication that memory
-        time was exceeded. This lets us give back the traceback.
+        It seems that each of RLIMIT_AS, RLIMIT_DATA and RLIMIT_RSS do nothing.
+        While they do set, nothing is done when those boundaries are exceeded.
 
-        We can't limit using resource.setrlimit as it seems that None of the
-        RLIMIT_X's are available. This we debugged by using
-        `import psutil; print(dir(psutil))` in which a MAC system did not have
-        any `RLIMIT_X` attributes while a Linux system did.
+        * Tried catching all available signals but non triggered
 
         We still however try this but it's unlikely to work
 
@@ -59,28 +55,14 @@ class LimiterMac(Limiter):
         memory : int
             The memory limit in bytes
         """
-        # This will likely Error on mac, however users can check for support
-        # before hand to prevent issues. We would like this to raise an Error
-        # if it does not work and was requested, instead of silently failing
-        print("before set AS", resource.getrlimit(resource.RLIMIT_AS))
-        print("before set DATA", resource.getrlimit(resource.RLIMIT_DATA))
-        print("before set RSS", resource.getrlimit(resource.RLIMIT_RSS))
-
+        # This will likely do nothing on newer mac, however users can check for support
+        # before hand to prevent issues.
         soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+
         self.old_limits = (soft, hard)
         new_limits = (memory, hard)
 
-        catchable_sigs = set(signal.Signals) - {signal.SIGKILL, signal.SIGSTOP}
-        for sig in catchable_sigs:
-            signal.signal(sig, LimiterMac._handler)
-
         resource.setrlimit(resource.RLIMIT_AS, new_limits)
-        resource.setrlimit(resource.RLIMIT_DATA, new_limits)
-        resource.setrlimit(resource.RLIMIT_RSS, new_limits)
-
-        print("after set AS", resource.getrlimit(resource.RLIMIT_AS))
-        print("after set DATA", resource.getrlimit(resource.RLIMIT_DATA))
-        print("after set RSS", resource.getrlimit(resource.RLIMIT_RSS))
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.

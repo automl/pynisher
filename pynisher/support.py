@@ -124,7 +124,7 @@ def supports_memory() -> bool:
 
     elif plat.startswith("darwin"):
         # Can't limit memory on Mac
-        return True
+        return False
 
     elif plat.startswith("win"):
         # Only supported if we can successfuly import `pywin32` modules
