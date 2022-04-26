@@ -62,19 +62,25 @@ class LimiterMac(Limiter):
         # This will likely Error on mac, however users can check for support
         # before hand to prevent issues. We would like this to raise an Error
         # if it does not work and was requested, instead of silently failing
-        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
-        print("before set", (soft, hard))
+        print("before set AS", resource.getrlimit(resource.RLIMIT_AS))
+        print("before set DATA", resource.getrlimit(resource.RLIMIT_DATA))
+        print("before set RSS", resource.getrlimit(resource.RLIMIT_RSS))
 
+        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
         self.old_limits = (soft, hard)
         new_limits = (memory, hard)
 
         catchable_sigs = set(signal.Signals) - {signal.SIGKILL, signal.SIGSTOP}
         for sig in catchable_sigs:
-            signal.signal(sig, print)  # Substitute handler of choice for `print`
+            signal.signal(sig, LimiterMac._handler)
 
         resource.setrlimit(resource.RLIMIT_AS, new_limits)
-        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
-        print("after set", (soft, hard))
+        resource.setrlimit(resource.RLIMIT_DATA, new_limits)
+        resource.setrlimit(resource.RLIMIT_RSS, new_limits)
+
+        print("after set AS", resource.getrlimit(resource.RLIMIT_AS))
+        print("after set DATA", resource.getrlimit(resource.RLIMIT_DATA))
+        print("after set RSS", resource.getrlimit(resource.RLIMIT_RSS))
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
