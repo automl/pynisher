@@ -169,13 +169,12 @@ class Pynisher(ContextDecorator):
         Any
             The result of calling the function that is being limited
         """
-        # We can safely ignore the input pipe as we do not feed data through
-        # to the pipe. The output pipe will be used by the subprocess to communicate
-        # the result back.
+        # The send pipe will be passed to the subprocess to send the result back
+        # while the receive pipe will be used to recieve it in this master process
         receive_pipe, send_pipe = self.context.Pipe(duplex=False)
 
         # The limiter is in charge of limiting resources once inside the subprocess
-        # It gets the `receive_pipe` through which it it should `output` it's results to
+        # It gets the `send_pipe` through which it it should `output` it's results to
         limiter = Limiter.create(
             func=self.func,
             output=send_pipe,
@@ -201,7 +200,7 @@ class Pynisher(ContextDecorator):
         # * (None, error, traceback)| failed
         #                               =>  Error, CPUtimeout linux/mac, MemoryError
         # * None                    | failed
-        #                               => MemoryError during sending of above error
+        #                               => MemoryError during sending of real error
         # * EMPTY                   | failed, nothing received from pipe
         #                               => Walltime, CPUTimeout windows, Unknown
         result = EMPTY
@@ -211,7 +210,8 @@ class Pynisher(ContextDecorator):
         # Let loose
         subprocess.start()
 
-        # Will block here until wall time elapsed or the subprocess was ended
+        # If self.wall time is None, block until the subprocess finishes or terminates
+        # Otherwise, will return after wall_time and the process will still be running
         subprocess.join(self.wall_time)
 
         # exitcode here can only take on 3 values
