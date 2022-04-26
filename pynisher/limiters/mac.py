@@ -88,7 +88,7 @@ class LimiterMac(Limiter):
             unlimited_resources = (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
             restored_limits = getattr(self, "old_limits", unlimited_resources)
 
-            resource.setrlimit(resource.RLIMIT_DATA, restored_limits)
+            resource.setrlimit(resource.RLIMIT_AS, restored_limits)
             return True
         except Exception as e:
             self._raise_warning(
