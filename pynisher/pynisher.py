@@ -184,7 +184,6 @@ class Pynisher(ContextDecorator):
             output=send_pipe,
             memory=self.memory,
             cpu_time=self.cpu_time,
-            wall_time=self.wall_time,
             grace_period=self.grace_period,
             warnings=self.warnings,
         )

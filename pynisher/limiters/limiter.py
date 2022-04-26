@@ -21,7 +21,6 @@ class Limiter(ABC):
         output: Connection,
         memory: int | None = None,
         cpu_time: int | None = None,
-        wall_time: int | None = None,
         grace_period: int = 1,
         warnings: bool = True,
     ) -> None:
@@ -40,9 +39,6 @@ class Limiter(ABC):
         cpu_time : int | None = None
             The cpu time in seconds to allocate
 
-        wall_time : int | None = None
-            The wall time in seconds to allocate
-
         grace_period : int = 1
             The grace period in seconds to give for a process to shutdown once signalled
 
@@ -53,7 +49,6 @@ class Limiter(ABC):
         self.output = output
         self.memory = memory
         self.cpu_time = cpu_time
-        self.wall_time = wall_time
         self.grace_period = grace_period
         self.warnings = warnings
 
@@ -144,7 +139,6 @@ class Limiter(ABC):
         output: Connection,
         memory: int | None = None,
         cpu_time: int | None = None,
-        wall_time: int | None = None,
         grace_period: int = 1,
         warnings: bool = True,
     ) -> Limiter:
@@ -158,7 +152,6 @@ class Limiter(ABC):
             "output": output,
             "memory": memory,
             "cpu_time": cpu_time,
-            "wall_time": wall_time,
             "grace_period": grace_period,
             "warnings": warnings,
         }
