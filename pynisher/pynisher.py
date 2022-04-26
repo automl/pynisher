@@ -63,11 +63,16 @@ class Pynisher(ContextDecorator):
             This means a process can technically run in a limit of 1 Byte, up until the
             point it tries to allocate anything.
 
-        cpu_time : int | None = None
-            The amount of cpu time in seconds to limit to
+        cpu_time : int | tuple[float, str] | None = None
+            The cpu time in seconds to limit the process to. This time is only counted while the
+            process is active.
+            Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
+            Units available are "s", "m", "h".
 
-        wall_time : int | None = None
+        wall_time : int | tuple[float, str] | None = None
             The amount of total wall time in seconds to limit to
+            Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
+            Units available are "s", "m", "h"
 
         grace_period : int = 1
             Buffer time in seconds while limiting CPU time.
@@ -404,11 +409,16 @@ def limit(
         This means a process can technically run in a limit of 1 Byte, up until the
         point it tries to allocate anything.
 
-    cpu_time : int | None = None
-        The amount of cpu time in seconds to limit to
+    cpu_time : int | tuple[float, str] | None = None
+        The cpu time in seconds to limit the process to. This time is only counted while the
+        process is active.
+        Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
+        Units available are "s", "m", "h".
 
-    wall_time : int | None = None
+    wall_time : int | tuple[float, str] | None = None
         The amount of total wall time in seconds to limit to
+        Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
+        Units available are "s", "m", "h"
 
     grace_period : int = 1
         Buffer time in seconds to give to a process to end when given a signal to end.
