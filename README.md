@@ -29,21 +29,35 @@ model_trainer = Pynisher(
     train_memory_hungry_model,
     name="Name for the process",
     memory=(500, "MB"),
-    wall_time=60*60  # 1hr
+    wall_time=(1.5, "h")  # 1h30m
 )
 
 try:
     model = model_trainer(X, y)
-except MemoryLimitException:
+except (WallTimeoutException, MemoryLimitException):
     model = None
 ```
 
+Passing `raises=False` means it will hide all errors and will return `EMPTY` if
+there is no result to give back.
+
+```
+def f():
+    raise ValueError()
+
+rf = Pynisher(f, wall_time=(2, "m"), raises=False)
+result = rf()
+
+if result is not EMPTY:
+    # ...
+```
+
+
 You can even use the decorator, in which case it will always be limited.
-Passing `raises=False` means it will hide all errors and just return `None`.
 Please note in [Details](#details) that support for this is limited and mostly
 for Linux.
 ```python
-from pynisher import limit
+from pynisher import limit, EMPTY
 
 
 @limit(wall_time=1, raises=False)
@@ -53,14 +67,8 @@ def notify_remote_server() -> Response:
     response = server.notify()
     return response
 
-# ... do something
-if (response := notify_remote_server()):
-    log(response)
-
-# ... something else
-if (response := notify_remote_server()):
-   log(response)
-# ...
+if (response := notify_remote_server()) is not EMPTY:
+    # ... do something
 ```
 
 You can safely raise errors from inside your function and the same kind of error will be reraised
@@ -110,16 +118,18 @@ if not restricted_func.supports("memory"):
 
 Currently we mainly support Linux with partial support for Mac and Windows:
 
-| OS      | `wall_time`             | `cpu_time`         | `memory`                | `@limit`             |
-| --      | -----------             | ----------         | --------                | --------             |
-| Linux   | :heavy_check_mark:      | :heavy_check_mark: | :heavy_check_mark:      | :heavy_check_mark:   |
-| Mac     | :heavy_check_mark:      | :heavy_check_mark: | :x: (3.)                | :x: (4.)             |
-| Windows | :heavy_check_mark: (1.) | :x:                | :heavy_check_mark: (2.) | :x:                  |
+| OS      | `wall_time`        | `cpu_time`              | `memory`                | `@limit`           |
+| --      | -----------        | ----------              | --------                | --------           |
+| Linux   | :heavy_check_mark: | :heavy_check_mark:      | :heavy_check_mark:      | :heavy_check_mark: |
+| Windows | :heavy_check_mark: | :heavy_check_mark: (1.) | :heavy_check_mark: (1.) | :x:  (3.)          |
+| Mac     | :heavy_check_mark: | :heavy_check_mark:      | :x: (2.)                | :x:  (3.)          |
 
-
-1. For `Python 3.7`, there is no access to `signal.raise_signal` which we use for `Windows`
-to trigger the timeout. The workaround using `os.kill(pid, signal)` doesn't seem to kill the process
-as intended as the process will continue to run. Seems fixable though.
+1. Limiting memory and cputime on Windows is done with the library `pywin32`. There seems
+to be installation issues when instead of using `conda install <x>`, you use `pip install <x>`
+inside a conda environment, specifically only with `Python 3.8` and `Python 3.9`.
+The workaround is to instead install `pywin32` with conda, which can be done with
+`pip uninstall pywin32; conda install pywin32`.
+Please see this [issue](https://github.com/mhammond/pywin32/issues/1865) for updates.
 
 2. Mac doesn't seem to allow for limiting a processes memory. No workaround has been found
 including trying `launchctl` which seems global and ignores memory limiting. Possibly `ulimit`
@@ -128,16 +138,11 @@ and will either fail explicitly or silently, hence we advertise it is not suppor
 However, passing a memory limit on mac is still possible but may not do anything useful or
 even raise an error.
 
-3. Limiting memory on Windows is done with the library `pywin32`. There seems to be installation
-issues when instead of using `conda install <x>`, you use `pip install <x>` inside a conda environment,
-specifically only with `Python 3.8` and `Python 3.9`. The workaround is to instead install
-`pywin32` with conda, which can be done with `pip uninstall pywin32; conda install pywin32`.
-Please see this [issue](https://github.com/mhammond/pywin32/issues/1865) for updates.
-
-4. Due to how multiprocessing pickling protocols work and were updated, `@limit(...)` does
+3. This is something due to how multiprocessing pickling protocols work, hence `@limit(...)` does
 not work for your Mac/Windows. Please use the `Pynisher` method of limiting resources in this case.
 (Technically this is supported for Mac Python 3.7 though). This is likely due to the default
-`spawn` context for Windows and Mac, while for Linux, the `fork` context seems to work.
+`spawn` context for Windows and Mac but using other available methods on Mac also seems to not work.
+For Linux, the `fork` and `forkserver` context seems to work.
 
 
 #### Parameters
@@ -146,8 +151,8 @@ The full list of options available with both `Pynisher` and `@limit` are:
 def __init__(
     name: str | None = None,
     memory: int | tuple[int, str] | None = None,
-    cpu_time: int | None = None,
-    wall_time: int | None = None,
+    cpu_time: int | tuple[float, str] | None = None,
+    wall_time: int | |tuple[float, str] | None = None,
     grace_period: int = 1,
     context: str | None = None,
     raises: bool = True,
@@ -161,12 +166,16 @@ name: str | None = None
 # can be "B", "KB", "MB" or "GB"
 memory: int | tuple[int, str] | None = None
 
-# The cpu time in seconds to limit the process to. This time is only counter while the
-# process is active
-cpu_time: int | None = None
+# The cpu time in seconds to limit the process to. This time is only counted while the
+# process is active.
+# Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
+# Units available are "s", "m", "h"
+cpu_time: int | tuple[float, str] | None = None
 
 # The wall time in seconds to limit the process to
-wall_time: int | None = None
+# Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
+# Units available are "s", "m", "h"
+wall_time: int | tuple[float, str] | None = None
 
 # Whether to throw any errors that occured in the subprocess to silently
 # throw them away. If `True` and an Error was raised, `None` will be returned.
@@ -176,6 +185,7 @@ wall_time: int | None = None
 raises: bool = True
 
 # This is some extra time added to the CPU time limit to enable proper cleanup
+# This has no effect on Windows as there is no graceful cleanup possible
 grace_period: int = 1
 
 # This is the multiprocess context used, please refer to their documentation
