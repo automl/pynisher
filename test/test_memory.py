@@ -12,9 +12,17 @@ if not supports("memory"):
     )
 
 
-def usememory(x: int) -> None:
+def usememory(x: int) -> int:
     """Use a certain amount of memory in B"""
     bytearray(int(x))
+    try:
+        import resource
+
+        print(resource.getrlimit(resource.RLIMIT_AS))
+        print(resource.getrlimit(resource.RLIMIT_DATA))
+    except Exception:
+        pass
+
     return x
 
 
