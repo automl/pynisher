@@ -29,7 +29,6 @@ repos:
         files: test/.*
         args: [--check]
 
-  # This is disabled as most modules fail this
   - repo: https://github.com/pycqa/pydocstyle
     rev: 6.1.1
     hooks:
