@@ -62,12 +62,12 @@ class LimiterMac(Limiter):
         # This will likely Error on mac, however users can check for support
         # before hand to prevent issues. We would like this to raise an Error
         # if it does not work and was requested, instead of silently failing
-        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+        soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
 
         self.old_limits = (soft, hard)
         new_limits = (memory, hard)
 
-        resource.setrlimit(resource.RLIMIT_AS, new_limits)
+        resource.setrlimit(resource.RLIMIT_DATA, new_limits)
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
@@ -94,7 +94,7 @@ class LimiterMac(Limiter):
             unlimited_resources = (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
             restored_limits = getattr(self, "old_limits", unlimited_resources)
 
-            resource.setrlimit(resource.RLIMIT_AS, restored_limits)
+            resource.setrlimit(resource.RLIMIT_DATA, restored_limits)
             return True
         except Exception as e:
             self._raise_warning(
