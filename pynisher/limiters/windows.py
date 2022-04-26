@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import signal
 import sys
 import traceback
 
-from pynisher.exceptions import CpuTimeoutException
 from pynisher.limiters.limiter import Limiter
 
 _win32_import_error_msg = """
@@ -80,23 +78,6 @@ class LimiterWindows(Limiter):
 
         return self._job
 
-    @staticmethod
-    def _handler(signum: int, frame: Any | None) -> Any:
-        # SIGTERM: wall time
-        #
-        # We should only limit to SIGTERM as this is the only signal that
-        # makes sense that would be sent to the process when the Job has it's
-        # cpu time limit reached
-        if signum == signal.SIGTERM:  # type: ignore
-            raise CpuTimeoutException
-
-        # UNKNOWN
-        #
-        #   We have caught some unknown signal. This means we are too restrictive
-        #   with the signals we are catching.
-        else:
-            raise NotImplementedError(f"Does not currently handle signal id {signum}")
-
     def limit_memory(self, memory: int) -> None:
         """Limit's the memory of this process."""
         # https://stackoverflow.com/a/54958772/5332072
@@ -132,8 +113,9 @@ class LimiterWindows(Limiter):
         ----
         Unfortunatly, when windows terminates a process, it doesn't use signaling
         methods like unix based systems, it just kills it and gives no chance for clean
-        up. Pynisher will have to do some polling to ensure that when this process
-        get's killed by a cputime limit that it won't be blocked.
+        up. Pynisher detects this in the parent process by looking for an empty response
+        from the pipe, checking that the process was killed non-gracefully, and then
+        seeing if cpu_time was set.
 
         Parameters
         ----------
