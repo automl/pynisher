@@ -14,6 +14,7 @@ from pynisher.exceptions import (
     WallTimeoutException,
 )
 from pynisher.limiters import Limiter
+from pynisher.support import contexts as valid_contexts
 from pynisher.support import supports
 from pynisher.util import callstring, memconvert, timeconvert
 
@@ -106,8 +107,7 @@ class Pynisher(ContextDecorator):
         if memory is not None and not memory >= 1:
             raise ValueError(f"`memory` ({memory}) must be >= 1 Byte")
 
-        valid_contexts = ["fork", "spawn", "forkserver", None]
-        if context not in valid_contexts:
+        if context is not None and context not in valid_contexts:
             raise ValueError(f"`context` ({context}) must be in {valid_contexts}")
 
         self.func = func
