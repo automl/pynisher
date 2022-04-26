@@ -20,9 +20,9 @@ def func(execution_time: float) -> float:
     -------
     print statements do not count towards the time limit.
     """
-    start = time.perf_counter()
+    start = time.process_time()
     while True:
-        duration = time.perf_counter() - start
+        duration = time.process_time() - start
         if duration > execution_time:
             break
 
@@ -58,5 +58,5 @@ def test_fail(cpu_time: int, grace_period: int, context: str) -> None:
             grace_period=grace_period,
             context=context,
         ) as rf:
-            over_limit = cpu_time + grace_period + 1
+            over_limit = (cpu_time + grace_period) * 3
             print(rf(over_limit))

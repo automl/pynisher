@@ -21,14 +21,10 @@ from pynisher.util import callstring, memconvert
 class _EMPTY:
     """An indicator of no result, followings `inspect._empty` pattern"""
 
+    pass
+
 
 EMPTY = _EMPTY()
-
-
-# After a process has return a result or has been terminated, we
-# give it `SAFE_JOIN_TIME` seconds to try clean up if it hasn't already
-# returned
-SAFE_JOIN_TIME = 5
 
 
 class Pynisher(ContextDecorator):
@@ -269,6 +265,14 @@ class Pynisher(ContextDecorator):
                         " This is likely a MemoryError."
                         f"\n{callstring(self.func, *args, **kwargs)}"
                     )
+
+            else:
+                raise PynisherException(
+                    "The process exited with exitcode 0, signifying it ended gracefully"
+                    " but the subprocess pipe is still open and there is no data to"
+                    " recieve. This should not happen. Please raise an issue with your"
+                    " code if possible"
+                )
 
         # If did not exit gracefully but cpu time was set and it's windows
         elif (
