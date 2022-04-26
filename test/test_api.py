@@ -15,7 +15,7 @@ def subfunction() -> int:
 
 def err_function() -> None:
     """Function that raises an error"""
-    raise RuntimeError("Error")
+    raise RuntimeError("Error from test func `err_function`")
 
 
 def sleepy(sleep: float) -> None:

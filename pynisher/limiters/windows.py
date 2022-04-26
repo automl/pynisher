@@ -127,7 +127,15 @@ class LimiterWindows(Limiter):
         win32job.SetInformationJobObject(job, enum_for_info, info)
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
-        """Limit's the cpu time of this process."""
+        """Limit's the cpu time of this process.
+
+        Note
+        ----
+        Unfortunatly, when windows terminates a process, it doesn't use signaling
+        methods like unix based systems, it just kills it and gives no chance for clean
+        up. Pynisher will have to do some polling to ensure that when this process
+        get's killed by a cputime limit that it won't be blocked.
+        """
         # First try to import stuff, an easy exception to catch and give good
         # information about
         try:
@@ -143,7 +151,7 @@ class LimiterWindows(Limiter):
 
         # Set the time limit
         time = int(cpu_time * 10_000_000)  # In 100ns units (1e+9 / 100)
-        info["PerJobUserTimeLimit"] = time
+        info["PerProcessUserTimeLimit"] = time
 
         # Activate the flag to turn on the limiting of cput time
         flag = win32job.JOB_OBJECT_LIMIT_JOB_TIME

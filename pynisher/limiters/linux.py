@@ -31,7 +31,7 @@ class LimiterLinux(Limiter):
         #   before finally sending SIGKILL.
         #   The default handler would just kill the process
         if signum == signal.SIGXCPU:
-            raise CpuTimeoutException
+            raise CpuTimeoutException()
 
         # UNKNOWN
         #

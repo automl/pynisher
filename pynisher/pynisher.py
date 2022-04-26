@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, Type, TypeVar
 
 import multiprocessing
+import sys
 from contextlib import ContextDecorator
 from functools import wraps
 
 from pynisher.exceptions import (
     CpuTimeoutException,
     MemoryLimitException,
+    PynisherException,
     WallTimeoutException,
 )
 from pynisher.limiters import Limiter
@@ -84,6 +86,9 @@ class Pynisher(ContextDecorator):
         warnings : bool
             Whether to emit pynisher warnings or not.
         """  # noqa
+        if wall_time is not None and cpu_time is not None:
+            raise ValueError("You may only set either `wall_time` or `cpu_time`")
+
         if not callable(func):
             raise ValueError(f"`func` ({func}) must be callable")
 
@@ -194,105 +199,121 @@ class Pynisher(ContextDecorator):
             name=self.name,
         )
 
-        # 4 kinds of `response`
+        # 4 kinds of `response` we expect
         #
-        # * (result, None)          | success
-        # * None, (err, traceback)  | failed, error raised (cputime, mem, any error)
-        # * None                    | failed, MemoryError during sending of above error
-        # * EMPTY                   | failed, nothing received from pipe (walltime)
-        response = EMPTY
+        # * (result, None, None)    | success
+        #                               => No error, we got a result
+        # * (None, error, traceback)| failed
+        #                               =>  Error, CPUtimeout linux/mac, MemoryError
+        # * None                    | failed
+        #                               => MemoryError during sending of above error
+        # * EMPTY                   | failed, nothing received from pipe
+        #                               => Walltime, CPUTimeout windows, Unknown
+        result = EMPTY
+        err: Exception | None = None
+        tb: str | None = None
 
         # Let loose
         subprocess.start()
 
-        try:
+        # Will block here until wall time elapsed or the subprocess was ended
+        subprocess.join(self.wall_time)
 
-            if self.wall_time is None:
-                # Block here until we get a response
-                response = receive_pipe.recv()
-            elif receive_pipe.poll(self.wall_time):
-                # `wall_time`
-                #   We can block with `poll` with a timeout of `wall_time` seconds
-                #   This gives us a platform independant implementation for wall_time
-                response = receive_pipe.recv()
-            else:
-                response = EMPTY
+        # exitcode here can only take on 3 values
+        #
+        # * None        | the subprocess is still running (walltime elapsed)
+        # * 0           | Ended gracefully, pipe is closed or response in the pipe
+        # * >0          | Process was terminated non-gracefully, nothing in the pipe
+        #               | and it may not be closed
+        exitcode = subprocess.exitcode
 
-                # Wall time elapsed, terminate the process
-                subprocess.terminate()
+        # Wall time expired
+        if exitcode is None:
+            subprocess.terminate()
 
-        except EOFError:
-            # This is raised when there is nothing left in the pipe to receive
-            # and the other end was closed. Probably not needed but good to have incase
-            # See:
-            # * https://docs.python.org/3/library/multiprocessing.html#multiprocessing.connection.Connection.recv  # noqa
-            response = EMPTY
-
-        finally:
-            # Join up the subprocess if it's still alive somehow
-            subprocess.join(timeout=SAFE_JOIN_TIME)
-            receive_pipe.close()
-            send_pipe.close()
-
-        # If we never got a response, it was a WallTimeoutException
-        if isinstance(response, _EMPTY):
-
-            if not self.raises:
-                return EMPTY
-
-            raise WallTimeoutException(
+            result = EMPTY
+            err = WallTimeoutException(
                 f"Did not finish in time ({self.wall_time}s)"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
 
-        # We got a response from the subprocess but it had no memory to do a send
-        if response is None:
+        # Completed gracefully
+        elif exitcode == 0:
 
-            if not self.raises:
-                return EMPTY
+            # Pipe has data in it or has been closed properly
+            if receive_pipe.poll():
 
-            raise MemoryLimitException(
-                "Sending the results/err from the subprocess caused a memory error."
-                f" Could not retrieve a traceback or cause from subprocess."
-                f"\n{callstring(self.func, *args, **kwargs)}"
-            )
+                # If there is data, it will be read
+                try:
+                    response = receive_pipe.recv()
+                    if response is None:
+                        result = EMPTY
+                        err = MemoryLimitException(
+                            "Ended gracefully but only `None` could be sent back"
+                            " from the process. This is a MemoryException as"
+                            " previous errors could not be sent previously."
+                            f"\n{callstring(self.func, *args, **kwargs)}"
+                        )
+                    else:
+                        result, err, tb = response
+                        # If we have an err, that excludes possible results
+                        if err is not None:
+                            result = EMPTY
 
-        # We got something back through the pipe, lets see what it is
-        result, error = response
+                # Otherwise, there was nothing to read
+                except EOFError:
+                    result = EMPTY
+                    err = MemoryLimitException(
+                        "Ended gracefully but could not a send response back."
+                        " This is likely a MemoryError."
+                        f"\n{callstring(self.func, *args, **kwargs)}"
+                    )
 
-        print(response)
-        # We got a result, yay, return it
-        # We can't check for `result is not None` as `None` is a valid thing
-        # that a restricted function could return, hence we check for the precense
-        # of an error
-        if error is None:
-            return result
-
-        # There was some sort of error, but we shouldn't raise, give EMPTY
-        if not self.raises:
-            return EMPTY
-
-        # Handle the error
-        err, tb = error
-
-        # It was a cpu timeout triggered
-        if self.cpu_time is not None and isinstance(err, CpuTimeoutException):
-            msg = (
+        # If did not exit gracefully but cpu time was set and it's windows
+        elif (
+            exitcode != 0
+            and self.cpu_time is not None
+            and sys.platform.lower().startswith("win")
+        ):
+            result = EMPTY
+            err = CpuTimeoutException(
                 f"Did not finish in cpu time ({self.cpu_time}s)"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
-            raise CpuTimeoutException(msg) from err
 
-        # It was a memory error
-        if self.memory is not None and isinstance(err, MemoryError):
-            msg = (
-                f"Exceeded memory limit ({self.memory}s)"
+        # We shouldn't get here
+        else:
+            result = EMPTY
+            err = PynisherException(
+                f"Unknown reason for exitcode {exitcode} and killed process"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
-            raise MemoryLimitException(msg) from err
 
-        # We don't know what it is, could be an issue in the function call
-        raise err.__class__(tb) from err
+        # Cleanup
+        receive_pipe.close()
+        send_pipe.close()
+
+        # We got a non empty result, hurray
+        if result is not EMPTY:
+            return result
+
+        # We have an error
+        assert isinstance(err, Exception)
+
+        if not self.raises:
+            return EMPTY
+
+        # Wrap MemoryErrors
+        errcls: Type[Exception]
+        if isinstance(err, MemoryError):
+            errcls = MemoryLimitException
+        else:
+            errcls = err.__class__
+
+        if tb is not None:
+            raise errcls(tb) from err
+        else:
+            raise err
 
     @staticmethod
     def supports(limit: str) -> bool:
@@ -393,9 +414,8 @@ def limit(
     if ctx == "spawn":
         raise ValueError(
             "Due to how multiprocessing pickling works, `@limit(...)` does not"
-            " work with 'spawn' context. Please use the `Pynisher` method of limiting"
-            " resources or change the context. Windows only has 'spawn' available and"
-            " this is the default on Mac from Python 3.8 onwards"
+            " for Mac or Windows, specifically with the `spawn` context."
+            " Please use the `Pynisher` method of limiting."
         )
 
     # Incase the first argument is a function, we assume it was missued

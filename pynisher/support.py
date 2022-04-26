@@ -137,7 +137,7 @@ def supports_limit_decorator() -> bool:
     """Whether using the decorator @limit is supported
 
     * Linx - Yes
-    * Mac - Only with Python 3.7
+    * Mac - No
     * Windows - No
 
     Check `pynisher::limit` for why
@@ -151,7 +151,7 @@ def supports_limit_decorator() -> bool:
     if plat.startswith("linux"):
         return True
     elif plat.startswith("darwin"):
-        return sys.version_info < (3, 8)
+        return False
     elif plat.startswith("win"):
         return False
     else:

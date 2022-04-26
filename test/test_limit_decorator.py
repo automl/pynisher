@@ -1,9 +1,15 @@
 import os
 import platform
 
-from pynisher import contexts, limit
+from pynisher import limit, supports_limit_decorator
 
 import pytest
+
+if not supports_limit_decorator():
+    pytest.skip(
+        f"Can't use @limit on {platform.platform()}",
+        allow_module_level=True,
+    )
 
 
 @limit(name="hello", context="fork")
@@ -31,43 +37,36 @@ def test_limit_gives_helpful_err_message_with_misuse() -> None:
             return x
 
 
-def test_limit_does_not_allow_spawn_context() -> None:
+def test_limit_as_runs_with_spawn_raises() -> None:
     """
     Expects
     -------
-    * Should raise an error if decorator is used with 'spawn' context
+    * Should be able to run in spawn context
     """
     with pytest.raises(ValueError):
 
-        @limit(name="valid", context="spawn")
-        def f(x: int) -> int:
-            return x
+        @limit(name="hello", context="spawn")
+        def limited_func_with_decorator_spawn() -> None:
+            """A limit function"""
+            pass
 
 
-@pytest.mark.skipif(
-    "fork" not in contexts,
-    reason=f"Platform {platform.platform()} does not supprt 'fork' context",
-)
 def test_limit_as_runs_as_seperate_process_fork() -> None:
     """
     Expects
     -------
-    * Should be able to decorate function
+    * Should be able to run in fork context
     """
     this_process_id = os.getpid()
     other_process_id = limited_func_with_decorator_fork()
     assert this_process_id != other_process_id
 
 
-@pytest.mark.skipif(
-    "forkserver" not in contexts,
-    reason=f"Platform {platform.platform()} does not supprt 'forkserver' context",
-)
 def test_limit_as_runs_as_seperate_process_forkserver() -> None:
     """
     Expects
     -------
-    * Should be able to decorate function
+    * Should be able to run in forkserver context
     """
     this_process_id = os.getpid()
     other_process_id = limited_func_with_decorator_forkserver()

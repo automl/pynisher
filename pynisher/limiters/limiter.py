@@ -8,7 +8,6 @@ import platform
 import sys
 import traceback
 from multiprocessing.connection import Connection
-from threading import Timer
 
 from pynisher.util import Monitor
 
@@ -58,10 +57,6 @@ class Limiter(ABC):
         self.grace_period = grace_period
         self.warnings = warnings
 
-        # This is specifically done by Windows to raise a timeout for
-        # wall time
-        self.timer: Timer | None = None
-
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         """Set process limits and then call the function with the given arguments.
 
@@ -80,70 +75,68 @@ class Limiter(ABC):
         None
         """
         try:
-            # Go through each limitation we can apply, relying
-            if self.memory is not None:
-
-                # We should probably warn if we exceed the memory usage before
-                # any limitation is set
-                memusage = Monitor().memory("B")
-                if memusage >= self.memory:
-                    msg = (
-                        f"Current memory usage in new process is {memusage}B but "
-                        f" setting limit to {self.memory}B. Likely to fail, try"
-                        f" increasing the memory limit"
-                    )
-                    self._raise_warning(msg)
-
-                self.limit_memory(self.memory)
 
             if self.cpu_time is not None:
                 self.limit_cpu_time(self.cpu_time, grace_period=self.grace_period)
 
-            # Call our function and if there are no exceptions raised, default to
-            # no error or trace
+            if self.memory is not None:
+                # We should probably warn if we exceed the memory usage before
+                # any limitation is set
+                memusage = Monitor().memory("B")
+                if self.memory <= memusage:
+                    self._raise_warning(
+                        f"Current memory usage in new process is {memusage}B but "
+                        f" setting limit to {self.memory}B. Likely to fail, try"
+                        f" increasing the memory limit"
+                    )
+                self.limit_memory(self.memory)
+
+            # Call our function
             result = self.func(*args, **kwargs)
             error = None
-
-            # This is a bit hacky and specific to Windows, however there's
-            # no quick way to control this within LimiterWindows
-            if self.timer is not None:
-                self.timer.cancel()
-
-            # Sending can cause some more memory to be allocated
-            # Try removing the memory limit and send again if it fails
-            try:
-                self.output.send((result, None))
-            except MemoryError as e:
-                if self._try_remove_memory_limit():
-                    self.output.send((result, None))
-                else:
-                    raise MemoryError("Failed to return result due to memory") from e
+            tb = None
 
         except Exception as e:
+            result = None
+            error = e
+            tb = "".join(traceback.format_exception(*sys.exc_info()))
 
-            # Something went wrong:
-            # * During the function call
-            # * Couldn't remove memory limit when failing to send the result back
-            str_traceback = "".join(traceback.format_exception(*sys.exc_info()))
-            error = (e, str_traceback)  # The traceback is lost if not stored
+        # Now let's try to send the result back
+        response = (result, error, tb)
+        try:
+            self.output.send(response)
+            self.output.close()
+            return
+        except Exception as e:
+            failed_send_tb = "".join(traceback.format_exception(*sys.exc_info()))
+            failed_send_response = (None, e, failed_send_tb)
 
+        # Maybe we can remove memory limit and try again
+        if self._try_remove_memory_limit():
             try:
-                self.output.send((None, error))
-            except MemoryError:
-                # Sending can cause some more memory to be allocated
-                # Try removing the memory limit and send again if it fails
-                if self._try_remove_memory_limit():
-                    self.output.send((None, error))
-                else:
-                    # We return None as it's only 16B, smallest object
-                    # that makes sense.
-                    # import sys; sys.getsizeof(None)
-                    self.output.send(None)
+                self.output.send(response)
+                self.output.close()
+                return
+            except Exception as e:
+                failed_send_tb = "".join(traceback.format_exception(*sys.exc_info()))
+                failed_send_response = (None, e, failed_send_tb)
 
+        # At this point, lets just try to send the errors we got from the attempts
+        # at sending the original response
+        try:
+            self.output.send(failed_send_response)
+            self.output.close()
+            return
+        except Exception:
+            pass
+
+        # One last effot to send the smallest None through
+        last_response_attempt = None
+        try:
+            self.output.send(last_response_attempt)
         finally:
             self.output.close()
-
-        return
+            return
 
     @staticmethod
     def create(
