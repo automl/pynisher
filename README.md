@@ -100,7 +100,7 @@ To check what if a feature is supported on your system:
 from pynisher import limit
 
 
-for limit in ["cputime", "walltime", "memory", "decorator"]:
+for limit in ["cpu_time", "wall_time", "memory", "decorator"]:
     print(f"Supports {limit} - {supports(limit)}")
 
 

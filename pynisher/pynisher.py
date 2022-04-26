@@ -324,7 +324,7 @@ class Pynisher(ContextDecorator):
 
         Parameters
         ----------
-        limit: "walltime" | "cputime" | "memory" | "decorator"
+        limit: "wall_time" | "cpu_time" | "memory" | "decorator"
             The feature to check support for
 
         Returns

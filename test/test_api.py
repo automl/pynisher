@@ -170,7 +170,9 @@ def test_no_raise_gets_empty() -> None:
     assert result is EMPTY
 
 
-@pytest.mark.skipif(not supports("walltime"), reason="System doesn't support walltime")
+@pytest.mark.skipif(
+    not supports("wall_time"), reason="System doesn't support wall_time"
+)
 def test_walltime_no_raise_gets_empty() -> None:
     """
     Expects
@@ -182,7 +184,7 @@ def test_walltime_no_raise_gets_empty() -> None:
     assert result is EMPTY
 
 
-@pytest.mark.skipif(not supports("walltime"), reason="System doesn't support cputime")
+@pytest.mark.skipif(not supports("wall_time"), reason="System doesn't support cpu_time")
 def test_cputime_no_raise_gets_empty() -> None:
     """
     Expects

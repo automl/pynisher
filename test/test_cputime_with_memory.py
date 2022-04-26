@@ -10,7 +10,7 @@ from pynisher.util import memconvert
 
 import pytest
 
-if not supports("memory") or not supports("cputime"):
+if not supports("memory") or not supports("cpu_time"):
     pytest.skip("Tests specifically for cputime and memory", allow_module_level=True)
 
 

@@ -26,7 +26,7 @@ def supports(limit: str) -> bool:
 
     Parameters
     ----------
-    limit: "walltime" | "cputime" | "memory" | "decorator"
+    limit: "wall_time" | "cpu_time" | "memory" | "decorator"
         The kind of feature to check support for
 
     Returns
@@ -35,8 +35,8 @@ def supports(limit: str) -> bool:
         Whether it is supported or not
     """
     mapping = {
-        "walltime": supports_walltime,
-        "cputime": supports_cputime,
+        "wall_time": supports_walltime,
+        "cpu_time": supports_cputime,
         "memory": supports_memory,
         "decorator": supports_limit_decorator,
     }
@@ -50,10 +50,6 @@ def supports(limit: str) -> bool:
 def supports_walltime() -> bool:
     """Check if wall time is supported on this system
 
-    * Linux - Yes
-    * Darwin - Yes
-    * Windows - Yes
-
     Check respective "pynisher/limiters/<platform>.py"
 
     Returns
@@ -63,13 +59,10 @@ def supports_walltime() -> bool:
     """
     plat = sys.platform.lower()
     if plat.startswith("linux"):
-        # Sure, should work
         return True
     elif plat.startswith("darwin"):
-        # Yup, also works
         return True
     elif plat.startswith("win"):
-        # Yay, they all work
         return True
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
@@ -78,12 +71,6 @@ def supports_walltime() -> bool:
 def supports_cputime() -> bool:
     """Check if cpu time is supported on this system
 
-    * Linux - Yes
-    * Darwin - Yes
-    * Windows - Yes
-
-    Check respective "pynisher/limiters/<platform>.py"
-
     Returns
     -------
     bool
@@ -91,13 +78,10 @@ def supports_cputime() -> bool:
     """
     plat = sys.platform.lower()
     if plat.startswith("linux"):
-        # Sure, should work
         return True
     elif plat.startswith("darwin"):
-        # Yup, also works
         return True
     elif plat.startswith("win"):
-        # Yup, we can do so with pywin32
         return _has_pywin32()
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
@@ -119,15 +103,10 @@ def supports_memory() -> bool:
     """
     plat = sys.platform.lower()
     if plat.startswith("linux"):
-        # Sure, should work
         return True
-
     elif plat.startswith("darwin"):
-        # Can't limit memory on Mac
         return False
-
     elif plat.startswith("win"):
-        # Only supported if we can successfuly import `pywin32` modules
         return _has_pywin32()
     else:
         raise NotImplementedError(f"Unknown system {platform.platform()}")
@@ -135,10 +114,6 @@ def supports_memory() -> bool:
 
 def supports_limit_decorator() -> bool:
     """Whether using the decorator @restricted is supported
-
-    * Linx - Yes
-    * Mac - No
-    * Windows - No
 
     Check `pynisher::restricted` for why
 
