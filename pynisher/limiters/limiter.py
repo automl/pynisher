@@ -162,17 +162,17 @@ class Limiter(ABC):
         #   For example, the `resources` module is not avialable on Windows and so
         #   importing that would cause issues.
         #
-        if system_name == "linux":
+        if system_name.startswith("linux"):
             from pynisher.limiters.linux import LimiterLinux
 
             return LimiterLinux(**arguments)  # type: ignore
 
-        elif system_name == "darwin":
+        elif system_name.startswith("darwin"):
             from pynisher.limiters.mac import LimiterMac
 
             return LimiterMac(**arguments)  # type: ignore
 
-        elif system_name == "windows":
+        elif system_name.startswith("win"):
             from pynisher.limiters.windows import LimiterWindows
 
             return LimiterWindows(**arguments)  # type: ignore
