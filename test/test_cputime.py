@@ -44,10 +44,9 @@ def test_success(context: str) -> None:
         print(restricted_func(2))
 
 
-@pytest.mark.parametrize("cpu_time", [1, 2])
-@pytest.mark.parametrize("grace_period", [1, 2])
+@pytest.mark.parametrize("cpu_time", [2, 3])
 @pytest.mark.parametrize("context", contexts)
-def test_fail(cpu_time: int, grace_period: int, context: str) -> None:
+def test_fail(cpu_time: int, context: str) -> None:
     """
     Expects
     -------
@@ -59,8 +58,7 @@ def test_fail(cpu_time: int, grace_period: int, context: str) -> None:
         with Pynisher(
             func,
             cpu_time=cpu_time,
-            grace_period=grace_period,
             context=context,
         ) as rf:
-            over_limit = (cpu_time + grace_period) * 3
+            over_limit = cpu_time * 3
             print(rf(over_limit))

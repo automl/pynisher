@@ -148,7 +148,6 @@ def limit(
     memory: int | tuple[int, str] | None = None,
     cpu_time: int | tuple[float, str] | None = None,
     wall_time: int | |tuple[float, str] | None = None,
-    grace_period: int = 1,
     context: str | None = None,
     raises: bool = True,
     warnings: bool = True,
@@ -178,10 +177,6 @@ wall_time: int | tuple[float, str] | None = None
 # the controlling process. The exception to this are MemoryErrors which occur
 # in the subprocess, we convert these to MemoryLimitException.
 raises: bool = True
-
-# This is some extra time added to the CPU time limit to enable proper cleanup
-# This has no effect on Windows as there is no graceful cleanup possible
-grace_period: int = 1
 
 # This is the multiprocess context used, please refer to their documentation
 # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods

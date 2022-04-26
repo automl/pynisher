@@ -38,7 +38,6 @@ class Pynisher(ContextDecorator):
         memory: int | tuple[int, str] | None = None,
         cpu_time: int | tuple[float, str] | None = None,
         wall_time: int | tuple[float, str] | None = None,
-        grace_period: int = 1,
         context: str | None = None,
         raises: bool = True,
         warnings: bool = True,
@@ -73,9 +72,6 @@ class Pynisher(ContextDecorator):
             The amount of total wall time in seconds to limit to
             Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
             Units available are "s", "m", "h"
-
-        grace_period : int = 1
-            Buffer time in seconds while limiting CPU time.
 
         context : "fork" | "forkserver" | "spawn" | None = None
             The context to use with multiprocessing.get_context()
@@ -114,9 +110,6 @@ class Pynisher(ContextDecorator):
         if memory is not None and not memory >= 1:
             raise ValueError(f"`memory` ({memory}) must be >= 1 Byte")
 
-        if not grace_period >= 1:
-            raise ValueError(f"`grace_period` ({grace_period}) must be >= 1 second")
-
         valid_contexts = ["fork", "spawn", "forkserver", None]
         if context not in valid_contexts:
             raise ValueError(f"`context` ({context}) must be in {valid_contexts}")
@@ -126,7 +119,6 @@ class Pynisher(ContextDecorator):
         self.cpu_time = cpu_time
         self.memory = memory
         self.wall_time = wall_time
-        self.grace_period = grace_period
         self.raises = raises
         self.context = multiprocessing.get_context(context)
         self.warnings = warnings
@@ -193,7 +185,6 @@ class Pynisher(ContextDecorator):
             output=send_pipe,
             memory=self.memory,
             cpu_time=self.cpu_time,
-            grace_period=self.grace_period,
             warnings=self.warnings,
         )
 
@@ -370,7 +361,6 @@ def restricted(
     memory: int | tuple[int, str] | None = None,
     cpu_time: int | None = None,
     wall_time: int | None = None,
-    grace_period: int = 1,
     context: str | None = None,
     raises: bool = True,
     warnings: bool = True,
@@ -417,9 +407,6 @@ def restricted(
         Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
         Units available are "s", "m", "h"
 
-    grace_period : int = 1
-        Buffer time in seconds to give to a process to end when given a signal to end.
-
     context : "fork" | "forkserver" | "spawn" | None = None
         The context to use with multiprocessing.get_context()
         * https://docs.python.org/3/library/multiprocessing.html#multiprocessing.get_context
@@ -457,7 +444,6 @@ def restricted(
                 memory=memory,
                 cpu_time=cpu_time,
                 wall_time=wall_time,
-                grace_period=grace_period,
                 raises=raises,
             )
             return pynisher.run(*args, **kwargs)

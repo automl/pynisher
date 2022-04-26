@@ -64,24 +64,23 @@ class LimiterMac(Limiter):
 
         resource.setrlimit(resource.RLIMIT_AS, new_limits)
 
-    def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
+    def limit_cpu_time(self, cpu_time: int, interval: int = 1) -> None:
         """Limit the cpu time for this process.
 
-        A SIGXCPU will be sent to the `_handler` once the `soft` limit
-        is reached, once per second until `hard` is reached and then
-        finally a SIGKILL.
+        A SIGPROF will be sent to the `_handler` the `setitimer()` has
+        elapsed.
 
         Parameters
         ----------
         cpu_time : int
             The amount of time in seconds
 
-        grace_period : int = 1
-            The amount of extra time given to the process before a SIGKILL
-            is sent.
+        interval: int = 1
+            How often the itimer should ping the process once the time
+            has elapsed.
         """
         signal.signal(signal.SIGPROF, LimiterMac._handler)
-        signal.setitimer(signal.ITIMER_PROF, cpu_time, grace_period)
+        signal.setitimer(signal.ITIMER_PROF, cpu_time, interval)
 
     def _try_remove_memory_limit(self) -> bool:
         """Remove memory limit if it can"""

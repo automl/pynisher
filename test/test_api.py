@@ -145,26 +145,11 @@ def test_bad_wall_time_arg(wall_time: int) -> None:
         Pynisher(_f, wall_time=wall_time)
 
 
-@pytest.mark.parametrize("grace_period", [-1, 0])
-def test_bad_grace_period_arg(grace_period: int) -> None:
-    """
-    Expects
-    -------
-    * Should raise an Error about a bad grace_period limit
-    """
-
-    def _f() -> None:
-        pass
-
-    with pytest.raises(ValueError, match=r"grace_period"):
-        Pynisher(_f, grace_period=grace_period)
-
-
 def test_bad_context_arg() -> None:
     """
     Expects
     -------
-    * Should raise an Error about a bad grace_period limit
+    * Should raise an Error about a bad context arg
     """
 
     def _f() -> None:

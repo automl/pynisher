@@ -21,7 +21,6 @@ class Limiter(ABC):
         output: Connection,
         memory: int | None = None,
         cpu_time: int | None = None,
-        grace_period: int = 1,
         warnings: bool = True,
     ) -> None:
         """
@@ -39,9 +38,6 @@ class Limiter(ABC):
         cpu_time : int | None = None
             The cpu time in seconds to allocate
 
-        grace_period : int = 1
-            The grace period in seconds to give for a process to shutdown once signalled
-
         warnings : bool = True
             Whether to emit pynisher warnings or not.
         """
@@ -49,7 +45,6 @@ class Limiter(ABC):
         self.output = output
         self.memory = memory
         self.cpu_time = cpu_time
-        self.grace_period = grace_period
         self.warnings = warnings
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
@@ -72,7 +67,7 @@ class Limiter(ABC):
         try:
 
             if self.cpu_time is not None:
-                self.limit_cpu_time(self.cpu_time, grace_period=self.grace_period)
+                self.limit_cpu_time(self.cpu_time)
 
             if self.memory is not None:
                 # We should probably warn if we exceed the memory usage before
@@ -139,7 +134,6 @@ class Limiter(ABC):
         output: Connection,
         memory: int | None = None,
         cpu_time: int | None = None,
-        grace_period: int = 1,
         warnings: bool = True,
     ) -> Limiter:
         """For full documentation, see __init__."""
@@ -152,7 +146,6 @@ class Limiter(ABC):
             "output": output,
             "memory": memory,
             "cpu_time": cpu_time,
-            "grace_period": grace_period,
             "warnings": warnings,
         }
 
@@ -195,7 +188,7 @@ class Limiter(ABC):
         ...
 
     @abstractmethod
-    def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
+    def limit_cpu_time(self, cpu_time: int) -> None:
         """Limit's the cpu time of this process."""
         ...
 
