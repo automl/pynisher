@@ -27,7 +27,7 @@ def sleepy(sleep: float) -> None:
             break
 
 
-def usememory(x: int) -> None:
+def usememory(x: int) -> int:
     """Use a certain amount of memory in B"""
     bytearray(int(x))
     return x

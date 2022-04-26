@@ -3,35 +3,34 @@ Because limiting on windows sets limits on a Job, a thing that wraps
 a process twice, in a manner quite different to Unix systems, we test
 that using both limits does not interfere with
 """
-import sys
 import time
 
-from pynisher import CpuTimeoutException, MemoryLimitException, Pynisher
+from pynisher import CpuTimeoutException, MemoryLimitException, Pynisher, supports
 from pynisher.util import memconvert
 
 import pytest
 
-if not sys.platform.lower().startswith("win"):
-    pytest.skip("Tests specifically for windows", allow_module_level=True)
+if not supports("memory") or not supports("cputime"):
+    pytest.skip("Tests specifically for cputime and memory", allow_module_level=True)
 
 
-def usememory(x: int) -> None:
+def usememory(x: int) -> int:
     """Use a certain amount of memory in B"""
     bytearray(int(x))
-    return
+    return x
 
 
 def cpu_busy(execution_time: int) -> float:
-    """Keeps the cpu busy for `execution_time` wall clock seconds
+    """Keeps the cpu busy for `execution_time` seconds
 
     Parameters
     ----------
     execution_time: int
         Amount of seconds to keep the cpu busy for
     """
-    start = time.perf_counter()
+    start = time.process_time()
     while True:
-        duration = time.perf_counter() - start
+        duration = time.process_time() - start
         if duration > execution_time:
             break
 
@@ -48,11 +47,11 @@ def test_cputime_limit() -> None:
     mem_limit = (100, "MB")
     cputime_limit = 2
 
-    walltime_busy = 10
+    busy = 10
 
     with pytest.raises(CpuTimeoutException):
         with Pynisher(cpu_busy, memory=mem_limit, cpu_time=cputime_limit) as rf:
-            rf(walltime_busy)
+            print(rf(busy))
 
 
 def test_memory_limit() -> None:
@@ -65,7 +64,7 @@ def test_memory_limit() -> None:
     mem_limit = (100, "MB")
     cputime_limit = 100
 
-    allocate_mem = memconvert(200, to="MB")
+    allocate_mem = memconvert(200, frm="MB")
 
     with pytest.raises(MemoryLimitException):
         with Pynisher(usememory, memory=mem_limit, cpu_time=cputime_limit) as rf:
