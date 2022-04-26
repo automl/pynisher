@@ -94,6 +94,7 @@ module = [
     "winerror.*",
     "win32api.*",
     "win32job.*",
+    "sklearn.*",
 ]
 ignore_missing_imports = true
 
