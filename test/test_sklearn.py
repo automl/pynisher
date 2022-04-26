@@ -4,9 +4,6 @@ from typing import Callable, Type
 
 from itertools import product
 
-from sklearn.datasets import make_classification, make_regression
-from sklearn.svm import SVC, SVR
-
 from pynisher import (
     CpuTimeoutException,
     MemoryLimitException,
@@ -21,12 +18,18 @@ import pytest
 
 def train_svr(n_samples: int, n_features: int) -> None:
     """Trains an svr model"""
+    from sklearn.datasets import make_regression
+    from sklearn.svm import SVR
+
     X, y = make_regression(n_samples=n_samples, n_features=n_features)
     SVR().fit(X, y)
 
 
 def train_svc(n_samples: int, n_features: int) -> None:
     """Trains an svm model"""
+    from sklearn.datasets import make_classification
+    from sklearn.svm import SVC
+
     X, y = make_classification(n_samples=n_samples, n_features=n_features)
     SVC().fit(X, y)
 
