@@ -93,7 +93,7 @@ class LimiterMac(Limiter):
             return True
         except Exception as e:
             self._raise_warning(
-                f"Couldn't remove limit `memory` on Linux due to Error: {e}"
+                f"Couldn't remove limit `memory` on Mac due to Error: {e}"
                 f"\n{traceback.format_exc()} "
             )
             return False
