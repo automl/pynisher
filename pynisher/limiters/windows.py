@@ -154,7 +154,7 @@ class LimiterWindows(Limiter):
         info["PerProcessUserTimeLimit"] = time
 
         # Activate the flag to turn on the limiting of cput time
-        flag = win32job.JOB_OBJECT_LIMIT_JOB_TIME
+        flag = win32job.JOB_OBJECT_LIMIT_PROCESS_TIME
         info["LimitFlags"] |= flag
 
         # Finally set the new information
