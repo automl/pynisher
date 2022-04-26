@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import platform
 import time
 
@@ -12,7 +14,7 @@ if not supports_cputime():
     )
 
 
-def func(execution_time: float) -> float:
+def func(execution_time: float) -> tuple[float, int]:
     """
     Sleeps for `sleep` second.
 
@@ -20,13 +22,15 @@ def func(execution_time: float) -> float:
     -------
     print statements do not count towards the time limit.
     """
+    x = 0
     start = time.process_time()
     while True:
+        x += 1
         duration = time.process_time() - start
         if duration > execution_time:
             break
 
-    return duration
+    return (duration, x)
 
 
 @pytest.mark.parametrize("context", contexts)
