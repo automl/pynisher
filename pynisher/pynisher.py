@@ -413,13 +413,11 @@ def restricted(
     warnings : bool = True
         Whether to emit pynisher warnings or not.
     """  # noqa
-    ctx = multiprocessing.get_start_method() if context is None else context
-
-    if ctx == "spawn":
+    if not supports("decorator") or context == "spawn":
         raise ValueError(
             "Due to how multiprocessing pickling works, `@restricted(...)` does not"
             " for Mac or Windows, specifically with the `spawn` context."
-            " Please use the `Pynisher` method of limiting."
+            " Please use the `limit` method of limiting."
         )
 
     # Incase the first argument is a function, we assume it was missued
