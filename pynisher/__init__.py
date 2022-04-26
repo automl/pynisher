@@ -5,7 +5,7 @@ from pynisher.exceptions import (
     TimeoutException,
     WallTimeoutException,
 )
-from pynisher.pynisher import EMPTY, Pynisher, limit
+from pynisher.pynisher import EMPTY, Pynisher, limit, restricted
 from pynisher.support import (
     contexts,
     supports,
@@ -17,8 +17,9 @@ from pynisher.support import (
 
 __all__ = [
     "Pynisher",
-    "limit",
     "EMPTY",
+    "limit",
+    "restricted",
     "CpuTimeoutException",
     "MemoryLimitException",
     "PynisherException",

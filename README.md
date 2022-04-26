@@ -4,7 +4,7 @@ Pynisher is a library to limit resources during the running of synchronous funct
 
 Limit the time a process can take
 ```python
-from pynisher import Pynisher
+import pynisher
 
 
 def sleepy(x: int) -> int:
@@ -12,20 +12,20 @@ def sleepy(x: int) -> int:
     return x
 
 # You can also use `cpu_time` instead
-with Pynisher(sleepy, wall_time=7) as restricted_sleep:
-    x = restricted_sleep(10)  # Will raise a TimeoutException
+with pynisher.limit(sleepy, wall_time=7) as limited_sleep:
+    x = limited_sleep(10)  # Will raise a TimeoutException
 ```
 
 Limit the memory usage in a sequential manner
 ```python
-from pynisher import Pynisher, MemoryLimitException
+from pynisher import limit, MemoryLimitException, WallTimeoutException
 
 
 def train_memory_hungry_model(X, y) -> Model:
     # ... do some thing
     return Model
 
-model_trainer = Pynisher(
+model_trainer = limit(
     train_memory_hungry_model,
     name="Name for the process",
     memory=(500, "MB"),
@@ -41,12 +41,14 @@ except (WallTimeoutException, MemoryLimitException):
 Passing `raises=False` means it will hide all errors and will return `EMPTY` if
 there is no result to give back.
 
-```
+```python
+from pynisher import limit, EMPTY
+
 def f():
     raise ValueError()
 
-rf = Pynisher(f, wall_time=(2, "m"), raises=False)
-result = rf()
+limited_f = limit(f, wall_time=(2, "m"), raises=False)
+result = limited_f()
 
 if result is not EMPTY:
     # ...
@@ -57,33 +59,31 @@ You can even use the decorator, in which case it will always be limited.
 Please note in [Details](#details) that support for this is limited and mostly
 for Linux.
 ```python
-from pynisher import limit, EMPTY
+from pynisher import restricted
 
-
-@limit(wall_time=1, raises=False)
+@restricted(wall_time=1, raises=False)
 def notify_remote_server() -> Response:
     """We don't care that this fails, just give it a second to try"""
     server = block_until_access(...)
     response = server.notify()
-    return response
 
-if (response := notify_remote_server()) is not EMPTY:
-    # ... do something
+notify_remote_server()
+# ... continue on even if it failed
 ```
 
 You can safely raise errors from inside your function and the same kind of error will be reraised
 with a traceback.
 ```python
-from pynisher import Pynisher
+from pynisher import limit
 
 
 def f():
     raise MyCustomException()
 
-rf = Pynisher(f)
+limited_f = limit(f)
 
 try:
-    rf()
+    limited_f()
 except MyCustomException as e:
     ... # do what you need
 ```
@@ -97,29 +97,22 @@ function. The methods for limiting specific resources can be found within the re
 #### Features
 To check what if a feature is supported on your system:
 ```python
-from pynisher import supports
+from pynisher import limit
 
 
 for limit in ["cputime", "walltime", "memory", "decorator"]:
     print(f"Supports {limit} - {supports(limit)}")
-```
-
-You can also do using `Pynisher`
-```python
-from pynisher import Pynisher
-
-print(Pynisher.supports("walltime"))
 
 
-restricted_func = Pynisher(f, ...)
-if not restricted_func.supports("memory"):
+limited_f = limit(f, ...)
+if not limited_f.supports("memory"):
     ...
 ```
 
 Currently we mainly support Linux with partial support for Mac and Windows:
 
-| OS      | `wall_time`        | `cpu_time`              | `memory`                | `@limit`           |
-| --      | -----------        | ----------              | --------                | --------           |
+| OS      | `wall_time`        | `cpu_time`              | `memory`                | `@restricted`      |
+| --      | -----------        | ----------              | --------                | -------------      |
 | Linux   | :heavy_check_mark: | :heavy_check_mark:      | :heavy_check_mark:      | :heavy_check_mark: |
 | Windows | :heavy_check_mark: | :heavy_check_mark: (1.) | :heavy_check_mark: (1.) | :x:  (3.)          |
 | Mac     | :heavy_check_mark: | :heavy_check_mark:      | :x: (2.)                | :x:  (3.)          |
@@ -138,17 +131,19 @@ and will either fail explicitly or silently, hence we advertise it is not suppor
 However, passing a memory limit on mac is still possible but may not do anything useful or
 even raise an error.
 
-3. This is something due to how multiprocessing pickling protocols work, hence `@limit(...)` does
-not work for your Mac/Windows. Please use the `Pynisher` method of limiting resources in this case.
+3. This is something due to how multiprocessing pickling protocols work, hence `@restricted(...)` does
+not work for your Mac/Windows. Please use the `limit` method of limiting resources in this case.
 (Technically this is supported for Mac Python 3.7 though). This is likely due to the default
 `spawn` context for Windows and Mac but using other available methods on Mac also seems to not work.
 For Linux, the `fork` and `forkserver` context seems to work.
 
 
 #### Parameters
-The full list of options available with both `Pynisher` and `@limit` are:
+The full list of options available with both `limit` and `@restricted` are:
 ```python
-def __init__(
+def limit(
+    func: Callable,
+    *,
     name: str | None = None,
     memory: int | tuple[int, str] | None = None,
     cpu_time: int | tuple[float, str] | None = None,
@@ -193,7 +188,7 @@ grace_period: int = 1
 context: "fork" | "spawn" | "forkserver" | None = None
 
 
-# Whether to emit warnings form Pynisher or not. The current warnings:
+# Whether to emit warnings from  limit or not. The current warnings:
 # * When the memory limit is lower than the starting memory of a process
 # * When trying to remove the memory limit for sending back information
 #   from the subprocess to the main process
@@ -237,13 +232,13 @@ is to write to a file if needed.
 ```python
 from contextlib import redirect_stderr
 
-# You can always disable warnings from Pynisher
-restricted_func = Pynisher(func, warnings=False)
+# You can always disable warnings
+limited_f = limit(func, warnings=False)
 
 # Capture warnings in a file
 # Only seems to work properly on Linux
 with open("stderr.txt", "w") as stderr, redirect_stderr(stderr):
-    restricted_func()
+    limited_f()
 
 with open("stderr.txt", "r") as stderr:
     print(stderr.readlines())
@@ -258,7 +253,7 @@ Any other kind of issue will raise an exception with relevant information.
 
 The support for checking `exit_status` was removed and the success of a pynisher process can
 be handled in the usual Python manner of checking for errors, with a `try: except:`. If you
-don't care for the `exit_status` then use `f = Pynisher(func, raises=False)` and you can
+don't care for the `exit_status` then use `f = limit(func, raises=False)` and you can
 check for output `output = f(...)`. This will be `None` if an error was raised and was `raises=False`.
 
 Pynisher no longer times your function for you with `self.wall_clock_time`. If you need to measure

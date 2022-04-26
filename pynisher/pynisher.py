@@ -362,12 +362,12 @@ T = TypeVar("T")
 
 # NOTE: Simpler solution?
 #
-#   There might be a simpler solution then redfining a function, e.g. `limit = Pynisher`
-#   but it gets complicated as we need something like `@limit(memory=...)` but that
-#   won't work as the first arg to `Pynisher.__init__` should be the function itself.
-#   For now this should work
+#   There might be a simpler solution then redfining a function, e.g. `restricted =
+#   Pynisher` but it gets complicated as we need something like
+#   `@restricted(memory=...)` but that won't work as the first arg to
+#   `Pynisher.__init__` should be the function itself. For now this should work
 #
-def limit(
+def restricted(
     name: str | None = None,
     *,
     memory: int | tuple[int, str] | None = None,
@@ -378,11 +378,11 @@ def limit(
     raises: bool = True,
     warnings: bool = True,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:  # Lol ((...) -> T) -> ((...) -> T)
-    """Limit a function by using subprocesses
+    """Limit a function's resource consumption on each call
 
     ..code:: python
 
-        @limit(memory=1000, wall_time=14)
+        @restricted(memory=1000, wall_time=14)
         def f(x: int) -> int:
             return x * 2
 
@@ -390,7 +390,7 @@ def limit(
 
     Note
     ----
-    Due to how multiprocessing pickling works, `@limit(...)` does not
+    Due to how multiprocessing pickling works, `@restricted(...)` does not
     work for Mac/Windows with Python >= 3.8. Please use the `Pynisher`"
     method of limiting resources in this case.
 
@@ -437,19 +437,19 @@ def limit(
 
     if ctx == "spawn":
         raise ValueError(
-            "Due to how multiprocessing pickling works, `@limit(...)` does not"
+            "Due to how multiprocessing pickling works, `@restricted(...)` does not"
             " for Mac or Windows, specifically with the `spawn` context."
             " Please use the `Pynisher` method of limiting."
         )
 
     # Incase the first argument is a function, we assume it was missued
     #
-    # @limit
+    # @restricted
     # def f(): ...
     #
     # In this case, the function f will be passed as the first arg, `name`
     if callable(name):
-        raise ValueError("Please pass arguments to decorator `limit`")
+        raise ValueError("Please pass arguments to decorator `@restricted`")
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @wraps(func)
@@ -468,3 +468,6 @@ def limit(
         return wrapper
 
     return decorator
+
+
+limit = Pynisher

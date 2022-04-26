@@ -2,7 +2,7 @@
 import os
 import time
 
-from pynisher import EMPTY, Pynisher, contexts, supports
+from pynisher import EMPTY, Pynisher, contexts, limit, supports
 from pynisher.util import memconvert
 
 import pytest
@@ -78,6 +78,19 @@ def test_run(context: str) -> None:
 
     this_process_id = os.getpid()
     other_process_id = pynisher.run()
+    assert this_process_id != other_process_id
+
+
+def test_limit_usage() -> None:
+    """
+    Expects
+    -------
+    * Should be able to use in the `limit` api usage
+    """
+    with limit(subfunction) as rf:
+        this_process_id = os.getpid()
+        other_process_id = rf()
+
     assert this_process_id != other_process_id
 
 

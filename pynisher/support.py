@@ -134,18 +134,18 @@ def supports_memory() -> bool:
 
 
 def supports_limit_decorator() -> bool:
-    """Whether using the decorator @limit is supported
+    """Whether using the decorator @restricted is supported
 
     * Linx - Yes
     * Mac - No
     * Windows - No
 
-    Check `pynisher::limit` for why
+    Check `pynisher::restricted` for why
 
     Returns
     -------
     bool
-        Whether using @limit is supported
+        Whether using @restricted is supported
     """
     plat = sys.platform.lower()
     if plat.startswith("linux"):
