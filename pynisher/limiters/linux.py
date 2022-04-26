@@ -25,11 +25,11 @@ from pynisher.limiters.limiter import Limiter
 class LimiterLinux(Limiter):
     @staticmethod
     def _handler(signum: int, frame: Any | None) -> Any:
-        # SIGXCPU: cpu_time `setrlimit(RLIMIT_CPU, (soft, hard))`
+        # SIGPROF: cpu_time `setitimer(ITIMER_PRF)`
         #
-        #   Sent when process reaches `soft` limit of, then once a second until `hard`
-        #   before finally sending SIGKILL.
-        #   The default handler would just kill the process
+        #   This signal is raised when `setitimer(time)` elapses.
+        #   It measures the sys + user time used while the process is executing
+        #   * https://docs.python.org/3/library/signal.html#signal.setitimer
         if signum == signal.SIGPROF:
             raise CpuTimeoutException()
 

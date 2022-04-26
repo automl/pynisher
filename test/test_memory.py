@@ -15,7 +15,7 @@ if not supports("memory"):
 def usememory(x: int) -> None:
     """Use a certain amount of memory in B"""
     bytearray(int(x))
-    return
+    return x
 
 
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])

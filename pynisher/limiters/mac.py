@@ -25,11 +25,11 @@ from pynisher.limiters.limiter import Limiter
 class LimiterMac(Limiter):
     @staticmethod
     def _handler(signum: int, frame: Any | None) -> Any:
-        # SIGXCPU: cpu_time `setrlimit(RLIMIT_CPU, (soft, hard))`
+        # SIGPROF: cpu_time `setitimer(ITIMER_PRF)`
         #
-        #   Sent when process reaches `soft` limit of, then once a second until `hard`
-        #   before finally sending SIGKILL.
-        #   The default handler would just kill the process
+        #   This signal is raised when `setitimer(time)` elapses.
+        #   It measures the sys + user time used while the process is executing
+        #   * https://docs.python.org/3/library/signal.html#signal.setitimer
         if signum == signal.SIGPROF:
             raise CpuTimeoutException
 
@@ -62,12 +62,12 @@ class LimiterMac(Limiter):
         # This will likely Error on mac, however users can check for support
         # before hand to prevent issues. We would like this to raise an Error
         # if it does not work and was requested, instead of silently failing
-        soft, hard = resource.getrlimit(resource.RLIMIT_DATA)
+        soft, hard = resource.getrlimit(resource.RLIMIT_RSS)
 
         self.old_limits = (soft, hard)
         new_limits = (memory, hard)
 
-        resource.setrlimit(resource.RLIMIT_DATA, new_limits)
+        resource.setrlimit(resource.RLIMIT_RSS, new_limits)
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
