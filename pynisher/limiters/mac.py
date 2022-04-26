@@ -30,7 +30,7 @@ class LimiterMac(Limiter):
         #   Sent when process reaches `soft` limit of, then once a second until `hard`
         #   before finally sending SIGKILL.
         #   The default handler would just kill the process
-        if signum == signal.SIGXCPU:
+        if signum == signal.SIGPROF:
             raise CpuTimeoutException
 
         # UNKNOWN
@@ -80,11 +80,8 @@ class LimiterMac(Limiter):
             The amount of extra time given to the process before a SIGKILL
             is sent.
         """
-        soft = cpu_time
-        hard = cpu_time + grace_period
-
-        resource.setrlimit(resource.RLIMIT_CPU, (soft, hard))
-        signal.signal(signal.SIGXCPU, LimiterMac._handler)
+        signal.signal(signal.SIGPROF, LimiterMac._handler)
+        signal.setitimer(signal.ITIMER_PROF, cpu_time, grace_period)
 
     def _try_remove_memory_limit(self) -> bool:
         """Try to remove the memory limit if possible
