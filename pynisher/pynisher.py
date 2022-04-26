@@ -15,7 +15,7 @@ from pynisher.exceptions import (
 )
 from pynisher.limiters import Limiter
 from pynisher.support import supports
-from pynisher.util import callstring, memconvert
+from pynisher.util import callstring, memconvert, timeconvert
 
 
 class _EMPTY:
@@ -36,8 +36,8 @@ class Pynisher(ContextDecorator):
         *,
         name: str | None = None,
         memory: int | tuple[int, str] | None = None,
-        cpu_time: int | None = None,
-        wall_time: int | None = None,
+        cpu_time: int | tuple[float, str] | None = None,
+        wall_time: int | tuple[float, str] | None = None,
         grace_period: int = 1,
         context: str | None = None,
         raises: bool = True,
@@ -85,28 +85,36 @@ class Pynisher(ContextDecorator):
         if wall_time is not None and cpu_time is not None:
             raise ValueError("You may only set either `wall_time` or `cpu_time`")
 
+        if isinstance(cpu_time, tuple):
+            x, unit = cpu_time
+            cpu_time = int(timeconvert(x, frm=unit))
+
+        if isinstance(wall_time, tuple):
+            x, unit = wall_time
+            wall_time = int(timeconvert(x, frm=unit))
+
+        if isinstance(memory, tuple):
+            x, unit = memory
+            memory = int(memconvert(x, frm=unit))
+
         if not callable(func):
             raise ValueError(f"`func` ({func}) must be callable")
 
         if cpu_time is not None and not cpu_time >= 1:
-            raise ValueError(f"`cpu_time` ({cpu_time}) must be int >= 1")
+            raise ValueError(f"`cpu_time` ({cpu_time}) must be >= 1 seconds")
 
         if wall_time is not None and not wall_time >= 1:
-            raise ValueError(f"`wall_time` ({wall_time}) must be int >= 1")
+            raise ValueError(f"`wall_time` ({wall_time}) must be >= 1 second")
+
+        if memory is not None and not memory >= 1:
+            raise ValueError(f"`memory` ({memory}) must be >= 1 Byte")
 
         if not grace_period >= 1:
-            raise ValueError(f"`grace_period` ({grace_period}) must be int >= 1")
+            raise ValueError(f"`grace_period` ({grace_period}) must be >= 1 second")
 
         valid_contexts = ["fork", "spawn", "forkserver", None]
         if context not in valid_contexts:
             raise ValueError(f"`context` ({context}) must be in {valid_contexts}")
-
-        if isinstance(memory, tuple):
-            x, unit = memory
-            memory = int(memconvert(x, frm=unit, to="B"))
-
-        if memory is not None and not memory >= 1:
-            raise ValueError(f"`memory` ({memory}) must be int >= 1")
 
         self.func = func
         self.name = name

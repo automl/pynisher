@@ -5,16 +5,18 @@ from typing import Any, Callable
 import psutil
 from psutil import Process
 
-_unit_table = {
+_mem_unit_table = {
     "B": 1,
     "KB": 2**10,
     "MB": 2**20,
     "GB": 2**30,
 }
 
+_time_unit_table = {"s": 1, "m": 60, "h": 60 * 60}
+
 
 def memconvert(x: float, *, frm: str = "B", to: str = "B") -> float:
-    """Convert between units, assumes input is in bytes and assumes output is bytes
+    """Convert between memory units
 
     Parameters
     ----------
@@ -32,8 +34,8 @@ def memconvert(x: float, *, frm: str = "B", to: str = "B") -> float:
     float
         The memory amount
     """
-    u_from = _unit_table[frm.upper()]
-    u_to = _unit_table[to.upper()]
+    u_from = _mem_unit_table[frm.upper()]
+    u_to = _mem_unit_table[to.upper()]
 
     as_bytes = x * u_from
     as_target = as_bytes / u_to
@@ -43,6 +45,34 @@ def memconvert(x: float, *, frm: str = "B", to: str = "B") -> float:
         return int(as_target)
     else:
         return as_target
+
+
+def timeconvert(x: float, *, frm: str = "s", to: str = "s") -> float:
+    """Convert between time units
+
+    Parameters
+    ----------
+    x: float
+        The time amount
+
+    frm: "s" | "m" | "h" = "s"
+        What unit it is in
+
+    to: "s" | "m" | "h" = "s"
+        What unit to convert to
+
+    Returns
+    -------
+    float
+        The time amount
+    """
+    u_from = _time_unit_table[frm.lower()]
+    u_to = _time_unit_table[to.lower()]
+
+    as_seconds = x * u_from
+    as_target = as_seconds / u_to
+
+    return as_target
 
 
 def callstring(f: Callable, *args: Any, **kwargs: Any) -> str:
