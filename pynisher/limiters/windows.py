@@ -71,11 +71,11 @@ class LimiterWindows(Limiter):
                     or not win32job.IsProcessInJob(process, None)
                 ):
                     raise e
-                else:
-                    msg = (
-                        "The process is already in a job."
-                        " Nested jobs are not supported prior to Windows 8."
-                    )
+
+                msg = (
+                    "The process is already in a job."
+                    " Nested jobs are not supported prior to Windows 8."
+                )
                 raise RuntimeError(msg) from e
 
         return self._job
