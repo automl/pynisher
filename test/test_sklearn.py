@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Type
 
+import platform
 from itertools import product
 
 from pynisher import (
@@ -9,9 +10,10 @@ from pynisher import (
     MemoryLimitException,
     PynisherException,
     WallTimeoutException,
+    contexts,
     limit,
+    supports,
 )
-from pynisher.support import contexts
 
 import pytest
 
@@ -56,6 +58,16 @@ def test_train_svm(
     * Should raise the expected exception with the given limits
     """
     exception, limits = constraints
+
+    if exception is CpuTimeoutException and not supports("cpu_time"):
+        pytest.skip(f"Can't limit `cpu_time` on {platform.platform()}")
+
+    if exception is WallTimeoutException and not supports("wall_time"):
+        pytest.skip(f"Can't limit `wall_time` on {platform.platform()}")
+
+    if exception is MemoryLimitException and not supports("memory"):
+        pytest.skip(f"Can't limit `memory` on {platform.platform()}")
+
     lf = limit(model_trainer, **limits)
 
     with pytest.raises(exception):
