@@ -52,7 +52,12 @@ class LimiterLinux(Limiter):
         memory : int
             The memory limit in bytes
         """
-        resource.setrlimit(resource.RLIMIT_AS, (memory, resource.RLIM_INFINITY))
+        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+
+        self.old_limits = (soft, hard)
+        new_limits = (memory, hard)
+
+        resource.setrlimit(resource.RLIMIT_AS, new_limits)
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
@@ -76,9 +81,10 @@ class LimiterLinux(Limiter):
     def _try_remove_memory_limit(self) -> bool:
         """Remove memory limit if it can"""
         try:
-            resource.setrlimit(
-                resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
-            )
+            unlimited_resources = (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
+            restored_limits = getattr(self, "old_limits", unlimited_resources)
+
+            resource.setrlimit(resource.RLIMIT_AS, restored_limits)
             return True
         except Exception as e:
             self._raise_warning(

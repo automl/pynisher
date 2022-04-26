@@ -62,7 +62,12 @@ class LimiterMac(Limiter):
         # This will likely Error on mac, however users can check for support
         # before hand to prevent issues. We would like this to raise an Error
         # if it does not work and was requested, instead of silently failing
-        resource.setrlimit(resource.RLIMIT_AS, (memory, resource.RLIM_INFINITY))
+        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+
+        self.old_limits = (soft, hard)
+        new_limits = (memory, hard)
+
+        resource.setrlimit(resource.RLIMIT_AS, new_limits)
 
     def limit_cpu_time(self, cpu_time: int, grace_period: int = 1) -> None:
         """Limit the cpu time for this process.
@@ -84,21 +89,16 @@ class LimiterMac(Limiter):
         signal.setitimer(signal.ITIMER_PROF, cpu_time, grace_period)
 
     def _try_remove_memory_limit(self) -> bool:
-        """Try to remove the memory limit if possible
-
-        Returns
-        -------
-        success: bool
-            Whether it was successful
-        """
+        """Remove memory limit if it can"""
         try:
-            resource.setrlimit(
-                resource.RLIMIT_AS, (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
-            )
+            unlimited_resources = (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
+            restored_limits = getattr(self, "old_limits", unlimited_resources)
+
+            resource.setrlimit(resource.RLIMIT_AS, restored_limits)
             return True
         except Exception as e:
             self._raise_warning(
-                f"Couldn't remove limit `memory` on Darwin due to Error: {e}"
+                f"Couldn't remove limit `memory` on Linux due to Error: {e}"
                 f"\n{traceback.format_exc()} "
             )
             return False
