@@ -1,7 +1,7 @@
 """
 Because limiting on windows sets limits on a Job, a thing that wraps
 a process twice, in a manner quite different to Unix systems, we test
-that using both limits does not interfere with
+that using both limits do not interfere with
 """
 import time
 
