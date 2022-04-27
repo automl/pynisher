@@ -117,7 +117,7 @@ Currently we mainly support Linux with partial support for Mac and Windows:
 | Windows | :heavy_check_mark: | :heavy_check_mark: (1.) | :heavy_check_mark: (1.) | :x:  (3.)          |
 | Mac     | :heavy_check_mark: | :heavy_check_mark:      | :x: (2.)                | :x:  (3.)          |
 
-1. Limiting memory and cputime on Windows is done with the library `pywin32`. There seems
+1. Limiting memory and cputime on Windows is done with the library `pywin32`. There seem
 to be installation issues when instead of using `conda install <x>`, you use `pip install <x>`
 inside a conda environment, specifically only with `Python 3.8` and `Python 3.9`.
 The workaround is to instead install `pywin32` with conda, which can be done with
