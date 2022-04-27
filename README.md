@@ -171,7 +171,7 @@ cpu_time: int | tuple[float, str] | None = None
 # Units available are "s", "m", "h"
 wall_time: int | tuple[float, str] | None = None
 
-# Whether to throw any errors that occured in the subprocess to silently
+# Whether to throw any errors that occured in the subprocess or to silently
 # throw them away. If `True` and an Error was raised, `None` will be returned.
 # The errors raised in the subprocess will be the same type that are raised in
 # the controlling process. The exception to this are MemoryErrors which occur
