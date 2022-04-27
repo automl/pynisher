@@ -130,7 +130,7 @@ class Pynisher(ContextDecorator):
         return self.run
 
     def __exit__(self, *exc: Any) -> None:
-        """Doesn't do anything to useful at the moment.
+        """Doesn't do anything too useful at the moment.
 
         Returns
         -------
