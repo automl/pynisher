@@ -129,7 +129,7 @@ including trying `launchctl` which seems global and ignores memory limiting. Pos
 could work but needs to be tested. Using `setrlimit(RLIMIT_AS, (soft, hard))` does nothing
 and will either fail explicitly or silently, hence we advertise it is not supported.
 However, passing a memory limit on mac is still possible but may not do anything useful or
-even raise an error.
+even raise an error. If you are aware of a solution, please let us know.
 
 3. This is something due to how multiprocessing pickling protocols work, hence `@restricted(...)` does
 not work for your Mac/Windows. Please use the `limit` method of limiting resources in this case.
