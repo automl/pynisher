@@ -120,7 +120,7 @@ class Pynisher(ContextDecorator):
         self.warnings = warnings
 
     def __enter__(self) -> Callable:
-        """Doesn't do anything to useful at the moment.
+        """Doesn't do anything too useful at the moment.
 
         Returns
         -------
