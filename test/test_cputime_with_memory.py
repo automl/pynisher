@@ -3,41 +3,24 @@ Because limiting on windows sets limits on a Job, a thing that wraps
 a process twice, in a manner quite different to Unix systems, we test
 that using both limits do not interfere with
 """
-import time
-
-from pynisher import CpuTimeoutException, MemoryLimitException, Pynisher, supports
-from pynisher.util import memconvert
+from pynisher import (
+    CpuTimeoutException,
+    MemoryLimitException,
+    Pynisher,
+    contexts,
+    supports,
+)
 
 import pytest
+
+from test.util import cputime_sleep, usememory
 
 if not supports("memory") or not supports("cpu_time"):
     pytest.skip("Tests specifically for cputime and memory", allow_module_level=True)
 
 
-def usememory(x: int) -> int:
-    """Use a certain amount of memory in B"""
-    bytearray(int(x))
-    return x
-
-
-def cpu_busy(execution_time: int) -> float:
-    """Keeps the cpu busy for `execution_time` seconds
-
-    Parameters
-    ----------
-    execution_time: int
-        Amount of seconds to keep the cpu busy for
-    """
-    start = time.process_time()
-    while True:
-        duration = time.process_time() - start
-        if duration > execution_time:
-            break
-
-    return duration
-
-
-def test_cputime_limit() -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_cputime_limit(context: str) -> None:
     """
     Expects
     -------
@@ -50,11 +33,17 @@ def test_cputime_limit() -> None:
     busy = 10
 
     with pytest.raises(CpuTimeoutException):
-        with Pynisher(cpu_busy, memory=mem_limit, cpu_time=cputime_limit) as rf:
+        with Pynisher(
+            cputime_sleep,
+            memory=mem_limit,
+            cpu_time=cputime_limit,
+            context=context,
+        ) as rf:
             print(rf(busy))
 
 
-def test_memory_limit() -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_memory_limit(context: str) -> None:
     """
     Expects
     -------
@@ -64,8 +53,13 @@ def test_memory_limit() -> None:
     mem_limit = (100, "MB")
     cputime_limit = 100
 
-    allocate_mem = memconvert(200, frm="MB")
+    allocate_mem = (200, "MB")
 
     with pytest.raises(MemoryLimitException):
-        with Pynisher(usememory, memory=mem_limit, cpu_time=cputime_limit) as rf:
+        with Pynisher(
+            usememory,
+            memory=mem_limit,
+            cpu_time=cputime_limit,
+            context=context,
+        ) as rf:
             rf(allocate_mem)

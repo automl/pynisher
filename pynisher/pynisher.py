@@ -82,39 +82,57 @@ class Pynisher(ContextDecorator):
 
         warnings : bool = True
             Whether to emit pynisher warnings or not.
+
+        wrap_exceptions: dict[str, Iterable[Exception]] | None = None
+            The exceptions that Pynisher will wrap with PynisherException
+
+            In certain cases, limiting memory can lead to errors that do not derive
+            from MemoryError and so pynisher has no way to tell that limiting memory
+            was the root cause of the error. For example, importing some libraries under
+            memory constraints can lead to ImportError or OSError, which we can not
+            tell apart from usual
         """  # noqa
+        _cpu_time: int | None
         if isinstance(cpu_time, tuple):
             x, unit = cpu_time
-            cpu_time = round(timeconvert(x, frm=unit))
+            _cpu_time = round(timeconvert(x, frm=unit))
+        else:
+            _cpu_time = cpu_time
 
+        _wall_time: int | None
         if isinstance(wall_time, tuple):
             x, unit = wall_time
-            wall_time = round(timeconvert(x, frm=unit))
+            _wall_time = round(timeconvert(x, frm=unit))
+        else:
+            _wall_time = wall_time
 
+        _memory: int | None
         if isinstance(memory, tuple):
             x, unit = memory
-            memory = round(memconvert(x, frm=unit))
+            _memory = round(memconvert(x, frm=unit))
+        else:
+            _memory = memory
 
         if not callable(func):
             raise ValueError(f"`func` ({func}) must be callable")
 
-        if cpu_time is not None and not cpu_time >= 1:
-            raise ValueError(f"`cpu_time` ({cpu_time}) must be >= 1 seconds")
+        if _cpu_time is not None and not _cpu_time >= 1:
+            raise ValueError(f"`cpu_time` {cpu_time} must be >= 1 seconds")
 
-        if wall_time is not None and not wall_time >= 1:
-            raise ValueError(f"`wall_time` ({wall_time}) must be >= 1 second")
+        if _wall_time is not None and not _wall_time >= 1:
+            raise ValueError(f"`wall_time` {wall_time} must be >= 1 second")
 
-        if memory is not None and not memory >= 1:
-            raise ValueError(f"`memory` ({memory}) must be >= 1 Byte")
+        if _memory is not None and not _memory >= 1:
+            raise ValueError(f"`memory` {memory} must be >= 1 Byte")
 
         if context is not None and context not in valid_contexts:
-            raise ValueError(f"`context` ({context}) must be in {valid_contexts}")
+            raise ValueError(f"`context` {context} must be in {valid_contexts}")
 
         self.func = func
         self.name = name
-        self.cpu_time = cpu_time
-        self.memory = memory
-        self.wall_time = wall_time
+        self.cpu_time = _cpu_time
+        self.memory = _memory
+        self.wall_time = _wall_time
         self.raises = raises
         self.context = multiprocessing.get_context(context)
         self.warnings = warnings
@@ -244,9 +262,9 @@ class Pynisher(ContextDecorator):
                     if response is None:
                         result = EMPTY
                         err = MemoryLimitException(
-                            "Ended gracefully but only `None` could be sent back"
-                            " from the process. This is a MemoryException as"
-                            " previous errors could not be sent previously."
+                            "While returning the result from your function,"
+                            " we could not retrieve the result or any error"
+                            " about why."
                             f"\n{callstring(self.func, *args, **kwargs)}"
                         )
                     else:

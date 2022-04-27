@@ -2,14 +2,14 @@ import sys
 from contextlib import redirect_stderr
 from pathlib import Path
 
-from pynisher import Pynisher
+from pynisher import Pynisher, contexts
 
 import pytest
 
 plat = sys.platform
 
-if not plat.lower() == "linux":
-    pytest.skip("Only seems to capture properly on Linux", allow_module_level=True)
+if "fork" not in contexts:
+    pytest.skip("Only seems to capture with with fork process", allow_module_level=True)
 
 
 def f() -> int:
@@ -18,7 +18,10 @@ def f() -> int:
 
 
 @pytest.mark.parametrize("warnings", [True, False])
-def test_prints_to_std_err_with_warnings_true(tmp_path: Path, warnings: bool) -> None:
+def test_prints_to_std_err_with_warnings_true(
+    tmp_path: Path,
+    warnings: bool,
+) -> None:
     """
     Expects
     -------
@@ -32,7 +35,12 @@ def test_prints_to_std_err_with_warnings_true(tmp_path: Path, warnings: bool) ->
     path = tmp_path / "tmp.txt"
 
     with path.open("w") as fn, redirect_stderr(fn):
-        rf = Pynisher(f, warnings=warnings, memory=(1, "KB"), raises=True)
+        rf = Pynisher(
+            f,
+            warnings=warnings,
+            memory=(1, "KB"),
+            raises=True,
+        )
         rf()
 
     with path.open("r") as fn:

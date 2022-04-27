@@ -1,9 +1,11 @@
 import platform
 
 from pynisher import MemoryLimitException, Pynisher, contexts, supports
-from pynisher.util import Monitor, memconvert
+from pynisher.util import Monitor
 
 import pytest
+
+from test.util import usememory
 
 if not supports("memory"):
     pytest.skip(
@@ -12,23 +14,14 @@ if not supports("memory"):
     )
 
 
-def usememory(x: int) -> int:
-    """Use a certain amount of memory in B"""
-    bytearray(int(x))
-    return x
-
-
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])
 @pytest.mark.parametrize("context", contexts)
 def test_fail(limit: int, context: str) -> None:
     """Using more than the allocated memory should raise an Error"""
-    allocate = limit * 3
-
-    restricted_func = Pynisher(usememory, memory=(limit, "MB"), context=context)
+    rf = Pynisher(usememory, memory=(limit, "MB"), context=context)
 
     with pytest.raises(MemoryLimitException):
-        allocation_bytes = memconvert(allocate, frm="MB", to="B")
-        restricted_func(allocation_bytes)
+        rf((limit * 3, "MB"))
 
 
 @pytest.mark.parametrize("limit", [1, 10, 100, 1000])
@@ -54,7 +47,6 @@ def test_success(limit: int, context: str) -> None:
         )
         pytest.skip(msg)
 
-    restricted_func = Pynisher(usememory, memory=(limit, "MB"), context=context)
+    rf = Pynisher(usememory, memory=(limit, "MB"), context=context)
 
-    allocation_bytes = memconvert(allocate, frm="MB", to="B")
-    restricted_func(allocation_bytes)
+    rf((allocate, "MB"))

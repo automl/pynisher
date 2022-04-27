@@ -2,6 +2,8 @@ from pynisher import Pynisher, contexts
 
 import pytest
 
+from test.util import raises_error
+
 
 class CustomException(Exception):
     """A custom exception class"""
@@ -9,18 +11,15 @@ class CustomException(Exception):
     pass
 
 
-def _f() -> None:
-    raise CustomException("Hello")
-
-
-def test_raises_false() -> None:
+@pytest.mark.parametrize("context", contexts)
+def test_raises_false(context: str) -> None:
     """
     Expects
     -------
     * Should raise no error even though the restricted function did
     """
-    with Pynisher(_f, raises=False) as restricted_func:
-        restricted_func()
+    with Pynisher(raises_error, raises=False, context=context) as rf:
+        rf()
 
 
 @pytest.mark.parametrize("context", contexts)
@@ -30,6 +29,6 @@ def test_raises_true(context: str) -> None:
     -------
     * Should complete successfully if using less time than given
     """
-    with Pynisher(_f, raises=True, context=context) as restricted_func:
+    with Pynisher(raises_error, raises=True, context=context) as rf:
         with pytest.raises(CustomException):
-            restricted_func()
+            rf(CustomException)
