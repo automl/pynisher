@@ -40,7 +40,7 @@ class Limiter(ABC):
         cpu_time: int | None = None,
         wall_time: int | None = None,
         warnings: bool = True,
-        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] | None = None,
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
         terminate_child_processes: bool = True,
     ) -> None:
         """
@@ -64,8 +64,8 @@ class Limiter(ABC):
         warnings : bool = True
             Whether to emit pynisher warnings or not.
 
-        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] | None = None,
-            Whether to wrap exceptions or not, defaults ot builtins
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False
+            Whether to wrap exceptions or not
 
             Please see `pynisher.__init__` for details
 
@@ -169,7 +169,7 @@ class Limiter(ABC):
         cpu_time: int | None = None,
         wall_time: int | None = None,
         warnings: bool = True,
-        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] | None = None,
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
         terminate_child_processes: bool = True,
     ) -> Limiter:
         """For full documentation, see __init__."""
@@ -233,10 +233,6 @@ class Limiter(ABC):
     def _raise_warning(self, msg: str) -> None:
         if self.warnings is True:
             print(msg, file=sys.stderr)
-
-    @staticmethod
-    def _get_builtin_exceptions() -> set[Type[Exception]]:
-        return {ImportError, OSError}
 
     def _wrap_error(self, err: Exception) -> Exception:
         # Wrap errors if indicated
