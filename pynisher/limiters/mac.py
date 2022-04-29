@@ -12,34 +12,12 @@ incase of specific modules or changes needed
 """
 from __future__ import annotations
 
-from typing import Any
-
 import resource
-import signal
-import traceback
 
-from pynisher.exceptions import CpuTimeoutException
 from pynisher.limiters.limiter import Limiter
 
 
 class LimiterMac(Limiter):
-    @staticmethod
-    def _handler(signum: int, frame: Any | None) -> Any:
-        # SIGPROF: cpu_time `setitimer(ITIMER_PRF)`
-        #
-        #   This signal is raised when `setitimer(time)` elapses.
-        #   It measures the sys + user time used while the process is executing
-        #   * https://docs.python.org/3/library/signal.html#signal.setitimer
-        if signum == signal.SIGPROF:
-            raise CpuTimeoutException
-
-        # UNKNOWN
-        #
-        #   We have caught some unknown signal. This means we are too restrictive
-        #   with the signals we are catching.
-        else:
-            raise NotImplementedError(f"Does not handle signal with id {signum}")
-
     def limit_memory(self, memory: int) -> None:
         """Limit the addressable memory
 
@@ -67,8 +45,14 @@ class LimiterMac(Limiter):
     def limit_cpu_time(self, cpu_time: int, interval: int = 1) -> None:
         """Limit the cpu time for this process.
 
-        A SIGPROF will be sent to the `_handler` the `setitimer()` has
-        elapsed.
+        The process will be killed with -signal.SIGXCPU status.
+
+        Attempts to handle the sigxcpu with `signal.signal(signal.SIGXCPU, handler)`
+        did not work as intended in cases where the process spawn subprocesses
+
+        Using `setitimer(ITIMER_PROF)` is not a good idea as it only measure the time
+        of the current process, non of it's children.
+
 
         Parameters
         ----------
@@ -79,20 +63,5 @@ class LimiterMac(Limiter):
             How often the itimer should ping the process once the time
             has elapsed.
         """
-        signal.signal(signal.SIGPROF, LimiterMac._handler)
-        signal.setitimer(signal.ITIMER_PROF, cpu_time, interval)
-
-    def _try_remove_memory_limit(self) -> bool:
-        """Remove memory limit if it can"""
-        try:
-            unlimited_resources = (resource.RLIM_INFINITY, resource.RLIM_INFINITY)
-            restored_limits = getattr(self, "old_limits", unlimited_resources)
-
-            resource.setrlimit(resource.RLIMIT_AS, restored_limits)
-            return True
-        except Exception as e:
-            self._raise_warning(
-                f"Couldn't remove limit `memory` on Mac due to Error: {e}"
-                f"\n{traceback.format_exc()} "
-            )
-            return False
+        limit = (cpu_time, cpu_time + 2)
+        resource.setrlimit(resource.RLIMIT_CPU, limit)

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+import os
+import signal
+
 import psutil
 from psutil import Process
 
@@ -93,6 +96,103 @@ def callstring(f: Callable, *args: Any, **kwargs: Any) -> str:
     parts = list(map(str, args)) + [f"{k}={v}" for k, v in kwargs.items()]
     param_str = ", ".join(parts)
     return f"{f.__name__}({param_str})"
+
+
+def terminate_process(
+    pid: int | None | psutil.Process = None,
+    sig: int = signal.SIGTERM,
+    timeout: int = 5,
+    children: bool = True,
+    parent: bool = False,
+    on_terminate: Callable[[psutil.Process], Any] | None = None,
+) -> tuple[list[psutil.Process], list[psutil.Process]]:
+    """Attemps to terminate a process
+
+    * https://psutil.readthedocs.io/en/latest/#kill-process-tree
+    """
+    if children is True:
+        return terminate_process_tree(
+            pid=pid,
+            include_parent=parent,
+            sig=sig,
+            timeout=timeout,
+        )
+    else:
+        try:
+            if not isinstance(pid, psutil.Process):
+                process = psutil.Process(pid)
+            else:
+                process = pid
+
+            process.send_signal(sig)
+            gone, alive = psutil.wait_procs(
+                [process], timeout=timeout, callback=on_terminate
+            )
+
+            for p in alive:
+                p.kill()
+
+            gone, alive = psutil.wait_procs(
+                [process], timeout=timeout, callback=on_terminate
+            )
+            return (gone, alive)
+        except psutil.NoSuchProcess:
+            return ([process], [])
+
+
+def terminate_process_tree(
+    pid: int | None | psutil.Process = None,
+    sig: int = signal.SIGTERM,
+    timeout: int = 5,
+    include_parent: bool = True,
+    on_terminate: Callable[[psutil.Process], Any] | None = None,
+) -> tuple[list[psutil.Process], list[psutil.Process]]:
+    """Attemps to get all the children of the process and then terminate them
+
+    * https://psutil.readthedocs.io/en/latest/#kill-process-tree
+    """
+    parent = None
+
+    if isinstance(pid, psutil.Process):
+        parent = pid
+        _pid = parent.pid
+    elif isinstance(pid, int):
+        _pid = pid
+    else:
+        _pid = os.getpid()
+
+    if _pid == os.getpid() and include_parent:
+        raise RuntimeError(f"Can't kill this process ({pid}) from within itself")
+
+    # Get the parent and its children
+    try:
+        if parent is None:
+            parent = psutil.Process(pid=pid)
+
+        children = parent.children(recursive=True)
+    except psutil.NoSuchProcess:
+        children = []
+
+    if include_parent:
+        children.append(parent)
+
+    for child in children:
+        try:
+            child.send_signal(sig)
+        except psutil.NoSuchProcess:
+            pass
+
+    gone, alive = psutil.wait_procs(children, timeout=timeout, callback=on_terminate)
+
+    # If any are still alive, SIGKILL
+    for child in alive:
+        try:
+            child.kill()
+        except psutil.NoSuchProcess:
+            pass
+
+    gone, alive = psutil.wait_procs(children, timeout=None, callback=on_terminate)
+    return (gone, alive)
 
 
 class Monitor:

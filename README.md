@@ -1,6 +1,8 @@
-Pynisher is a library to limit resources during the running of synchronous functions.
+Pynisher is a library to limit resources of a function call in a synchronous manner.
+You can use this to ensure that your function doesn't use up more resources than it
+should.
 
-## Quick Overview
+## Usage
 
 Limit the time a process can take
 ```python
@@ -27,7 +29,6 @@ def train_memory_hungry_model(X, y) -> Model:
 
 model_trainer = limit(
     train_memory_hungry_model,
-    name="Name for the process",
     memory=(500, "MB"),
     wall_time=(1.5, "h")  # 1h30m
 )
@@ -78,15 +79,16 @@ from pynisher import limit
 
 
 def f():
-    raise MyCustomException()
+    raise ValueError()
 
 limited_f = limit(f)
 
 try:
     limited_f()
-except MyCustomException as e:
+except ValueError as e:
     ... # do what you need
 ```
+
 
 ## Details
 Pynisher works by running your function inside of a subprocess.
@@ -141,24 +143,14 @@ For Linux, the `fork` and `forkserver` context seems to work.
 #### Parameters
 The full list of options available with both `limit` and `@restricted` are:
 ```python
-def limit(
-    func: Callable,
-    *,
-    name: str | None = None,
-    memory: int | tuple[int, str] | None = None,
-    cpu_time: int | tuple[float, str] | None = None,
-    wall_time: int | |tuple[float, str] | None = None,
-    context: str | None = None,
-    raises: bool = True,
-    warnings: bool = True,
-)
-
 # The name given to the multiprocessing.Process
 name: str | None = None
+
 
 # The memory limit to place. Specify the amount of bytes or (int, unit) where unit
 # can be "B", "KB", "MB" or "GB"
 memory: int | tuple[int, str] | None = None
+
 
 # The cpu time in seconds to limit the process to. This time is only counted while the
 # process is active.
@@ -166,10 +158,12 @@ memory: int | tuple[int, str] | None = None
 # Units available are "s", "m", "h"
 cpu_time: int | tuple[float, str] | None = None
 
+
 # The wall time in seconds to limit the process to
 # Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
 # Units available are "s", "m", "h"
 wall_time: int | tuple[float, str] | None = None
+
 
 # Whether to throw any errors that occured in the subprocess or to silently
 # throw them away. If `True` and an Error was raised, `None` will be returned.
@@ -177,6 +171,7 @@ wall_time: int | tuple[float, str] | None = None
 # the controlling process. The exception to this are MemoryErrors which occur
 # in the subprocess, we convert these to MemoryLimitException.
 raises: bool = True
+
 
 # This is the multiprocess context used, please refer to their documentation
 # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
@@ -188,6 +183,23 @@ context: "fork" | "spawn" | "forkserver" | None = None
 # * When trying to remove the memory limit for sending back information
 #   from the subprocess to the main process
 warnings: bool = True
+
+
+# How to handle errors. If `bool` then this decides whether or not to wrap them in
+# a pynisher exception. If `list`, you can specify which errors get wrapped in a
+# pynisher exception and if `dict`, you can specify what kind of errors get wrapped
+# and how. See `pynisher::Pynisher::__init__` for more details on `dict`
+#
+# * wrap_errors={ "memory": [ImportError, (OSError, 22)], "pynisher": [ValueError] }
+#
+wrap_errors: bool | list[Exception] | dict = False
+
+
+# Whether to terminate child processes of your limited function.
+# By default, pynisher will kill any subprocesses your function may spawn. If this
+# is not desired behaviour, please use `daemon=True` with your spawned subprocesses
+# and set `terminate_child_processes` to `False`
+terminate_child_processes: bool = True
 ```
 
 #### Exceptions
@@ -269,6 +281,12 @@ One way of solving this would be to change the forking behavior as described
 also makes very strong assumptions on how the code is executed. An alternative is passing a
 `Context <https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods>`_
 which uses either ``spawn`` or ``forkserver`` as the process startup method.
+
+
+## Nested Pynisher and Multiprocessing contexts
+Be careful when using multiple contexts for multiprocessing while using `pynisher`. If your
+pynished function spawns subprocess using `"forkserver"` while you set `pynisher` to use
+the context `"fork"`, then issues can begin to occur when terminate processes.
 
 ## Project origin
 This repository is based on Stefan Falkner's https://github.com/sfalkner/pynisher.

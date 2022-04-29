@@ -3,9 +3,12 @@ from __future__ import annotations
 from typing import Any, Callable, Type, TypeVar
 
 import multiprocessing
+import signal
 import sys
 from contextlib import ContextDecorator
 from functools import wraps
+
+import psutil
 
 from pynisher.exceptions import (
     CpuTimeoutException,
@@ -16,16 +19,9 @@ from pynisher.exceptions import (
 from pynisher.limiters import Limiter
 from pynisher.support import contexts as valid_contexts
 from pynisher.support import supports
-from pynisher.util import callstring, memconvert, timeconvert
+from pynisher.util import callstring, memconvert, terminate_process, timeconvert
 
-
-class _EMPTY:
-    """An indicator of no result, followings `inspect._empty` pattern"""
-
-    pass
-
-
-EMPTY = _EMPTY()
+EMPTY = object()
 
 
 class Pynisher(ContextDecorator):
@@ -42,6 +38,8 @@ class Pynisher(ContextDecorator):
         context: str | None = None,
         raises: bool = True,
         warnings: bool = True,
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
+        terminate_child_processes: bool = True,
     ) -> None:
         """
         Parameters
@@ -83,14 +81,65 @@ class Pynisher(ContextDecorator):
         warnings : bool = True
             Whether to emit pynisher warnings or not.
 
-        wrap_exceptions: dict[str, Iterable[Exception]] | None = None
-            The exceptions that Pynisher will wrap with PynisherException
+        wrap_errors: bool | list[str | Type[Exception]] | dict = False
+            Whether exceptions raised due to none resource related issues should be
+            wrapped in a PynisherException.
 
-            In certain cases, limiting memory can lead to errors that do not derive
-            from MemoryError and so pynisher has no way to tell that limiting memory
-            was the root cause of the error. For example, importing some libraries under
-            memory constraints can lead to ImportError or OSError, which we can not
-            tell apart from usual
+            * If True, all exceptions will be wrapped
+
+            * If False, no exceptions will be wrapped
+
+            * If list, you can provide your own list of exceptions to wrap, using a
+                string to prevent explicit imports outside the limited function.
+
+            * If dict, you can specify a mapping to which kind of pynisher errors map
+                to which kind of Exceptions. Again, you can specify a str if needed.
+                Please see below.
+
+            For advanced users, this can let you control whether module information will
+            get sent back from the limited function.
+
+            .. code:: python
+
+                def f():
+                    import sklearn
+                    raise sklearn.exceptions.NotFittedError()
+
+                lf = limit(f, wrap_errors=True):
+                lf = limit(f, wrap_errors=["NotFittedError"])  # More specific
+
+                try:
+                    lf()
+                except PynisherException as e:
+                    # The error `e` has no context related to sklearn so it's not
+                    # imported here
+
+            The dict arg lets you indicated how particular errors should be identified.
+            These will only be active if the corresponding limit is set.
+
+            This can be useful in cases where a known error is caused due to memory
+            constraints but does not raise a Python MemoryError.
+
+            Keys: "cpu_time", "wall_time", "memory", "pynisher"
+
+            Values: str, ExceptionType, (OSError, code), (OSError, code, winerr)
+
+            .. code:: Python
+
+                wrap_errors = {
+                    "memory": [ImportError, (OSError, 22, 1455)]
+                    "cpu_time": ["MyCustomException"]
+                }
+
+            For example, importing sklearn with a small enough memory limit can trigger
+            an `ImportError` on linux or a `(OSError, 22, 1455)` on windows. Here the
+            `22` stands for the Python OSError codes and the `1455` is the winerror code.
+
+            In general, you should not have to interface with this but it can allow you
+            some extra control.
+
+        terminate_child_processes: bool = True
+            Whether to clean up all child processes upon completion
         """  # noqa
         _cpu_time: int | None
         if isinstance(cpu_time, tuple):
@@ -128,6 +177,15 @@ class Pynisher(ContextDecorator):
         if context is not None and context not in valid_contexts:
             raise ValueError(f"`context` {context} must be in {valid_contexts}")
 
+        if isinstance(wrap_errors, dict):
+            valid_keys = {"memory", "wall_time", "cpu_time", "all"}
+            keys = list(wrap_errors.keys())
+            if not all(key in valid_keys for key in keys):
+                raise ValueError(
+                    f"`wrap_errors` has unknown key in {keys},"
+                    f" each must be in {valid_keys} "
+                )
+
         self.func = func
         self.name = name
         self.cpu_time = _cpu_time
@@ -136,6 +194,11 @@ class Pynisher(ContextDecorator):
         self.raises = raises
         self.context = multiprocessing.get_context(context)
         self.warnings = warnings
+        self.wrap_errors = wrap_errors
+        self.terminate_child_processes = terminate_child_processes
+
+        # Set once the function is running
+        self._process: psutil.Process | None = None
 
     def __enter__(self) -> Callable:
         """Doesn't do anything too useful at the moment.
@@ -198,7 +261,10 @@ class Pynisher(ContextDecorator):
             output=send_pipe,
             memory=self.memory,
             cpu_time=self.cpu_time,
+            wall_time=self.wall_time,
             warnings=self.warnings,
+            wrap_errors=self.wrap_errors,
+            terminate_child_processes=self.terminate_child_processes,
         )
 
         # We now create the subprocess and let it know that it should call the limiter's
@@ -228,6 +294,12 @@ class Pynisher(ContextDecorator):
         # Let loose
         subprocess.start()
 
+        try:
+            self._process = psutil.Process(subprocess.pid)
+        except psutil.NoSuchProcess:
+            # Likely only to occur when subprocess already finished
+            pass
+
         # If self.wall time is None, block until the subprocess finishes or terminates
         # Otherwise, will return after wall_time and the process will still be running
         subprocess.join(self.wall_time)
@@ -236,14 +308,17 @@ class Pynisher(ContextDecorator):
         #
         # * None        | the subprocess is still running (walltime elapsed)
         # * 0           | Ended gracefully, pipe is closed or response in the pipe
-        # * >0          | Process was terminated non-gracefully, nothing in the pipe
+        # * != 0        | Process was terminated non-gracefully, nothing in the pipe
         #               | and it may not be closed
         exitcode = subprocess.exitcode
 
+        if self._process is not None:
+            terminate_process(
+                self._process, children=self.terminate_child_processes, parent=True
+            )
+
         # Wall time expired
         if exitcode is None:
-            subprocess.terminate()
-
             result = EMPTY
             err = WallTimeoutException(
                 f"Did not finish in time ({self.wall_time}s)"
@@ -287,7 +362,7 @@ class Pynisher(ContextDecorator):
                     "The process exited with exitcode 0, signifying it ended gracefully"
                     " but the subprocess pipe is still open and there is no data to"
                     " recieve. This should not happen. Please raise an issue with your"
-                    " code if possible"
+                    " code that caused this expcetion, if possible"
                 )
 
         # If did not exit gracefully but cpu time was set and it's windows
@@ -302,6 +377,21 @@ class Pynisher(ContextDecorator):
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
 
+        elif exitcode == -signal.SIGSEGV and self.memory is not None:
+            result = EMPTY
+            err = MemoryLimitException(
+                "The function exited with a segmentation error (SIGSEGV) and a memory"
+                " limit was set. We presume this is due to the memory limit set."
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+
+        elif hasattr(signal, "SIGXCPU") and exitcode == -signal.SIGXCPU:
+            result = EMPTY
+            err = CpuTimeoutException(
+                f"Did not finish in cpu time ({self.cpu_time}s)"
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+
         # We shouldn't get here
         else:
             result = EMPTY
@@ -310,7 +400,6 @@ class Pynisher(ContextDecorator):
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
 
-        # Cleanup
         receive_pipe.close()
         send_pipe.close()
 
@@ -324,15 +413,9 @@ class Pynisher(ContextDecorator):
         if not self.raises:
             return EMPTY
 
-        # Wrap MemoryErrors
-        errcls: Type[Exception]
-        if isinstance(err, MemoryError):
-            errcls = MemoryLimitException
-        else:
-            errcls = err.__class__
-
         if tb is not None:
-            raise errcls(tb) from err
+            # Just so we can insert the traceback
+            raise err from err.__class__(tb)
         else:
             raise err
 
@@ -378,6 +461,8 @@ def restricted(
     context: str | None = None,
     raises: bool = True,
     warnings: bool = True,
+    wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
+    terminate_child_processes: bool = True,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:  # Lol ((...) -> T) -> ((...) -> T)
     """Limit a function's resource consumption on each call
 
@@ -430,6 +515,12 @@ def restricted(
 
     warnings : bool = True
         Whether to emit pynisher warnings or not.
+
+    wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False
+        Please see `Pynisher.__init__`
+
+    terminate_child_processes: bool = True
+        Whether to clean up all child processes upon completion
     """  # noqa
     if not supports("decorator") or context == "spawn":
         raise ValueError(
@@ -457,6 +548,7 @@ def restricted(
                 cpu_time=cpu_time,
                 wall_time=wall_time,
                 raises=raises,
+                wrap_errors=wrap_errors,
             )
             return pynisher.run(*args, **kwargs)
 

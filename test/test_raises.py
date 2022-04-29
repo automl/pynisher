@@ -32,3 +32,18 @@ def test_raises_true(context: str) -> None:
     with Pynisher(raises_error, raises=True, context=context) as rf:
         with pytest.raises(CustomException):
             rf(CustomException)
+
+
+@pytest.mark.parametrize("context", contexts)
+def test_raises_with_args(context: str) -> None:
+    """
+    Expects
+    -------
+    * Should be able to pass back args of an exception
+    """
+    with Pynisher(raises_error, raises=True, context=context) as rf:
+        with pytest.raises(CustomException) as e:
+            e = CustomException("apple")
+            rf(e)
+
+        assert e.args[0] == "apple"

@@ -13,10 +13,13 @@ def return_none() -> None:
     return None
 
 
-def raises_error(exception: Type[Exception] | None = None) -> None:
+def raises_error(exception: Type[Exception] | Exception | None = None) -> None:
     """Raise `exception` or RuntimeError if None provided"""
     exception = exception if exception is not None else RuntimeError
-    raise exception("RAISED")
+    if isinstance(exception, Exception):
+        raise exception
+    else:
+        raise exception("RAISED")
 
 
 def get_process_id() -> int:

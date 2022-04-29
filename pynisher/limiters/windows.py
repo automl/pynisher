@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import sys
-import traceback
 
 from pynisher.limiters.limiter import Limiter
 
@@ -145,34 +144,3 @@ class LimiterWindows(Limiter):
 
         # Finally set the new information
         win32job.SetInformationJobObject(job, enum_for_info, info)
-
-    def _try_remove_memory_limit(self) -> bool:
-        """Remove memory limit if it can"""
-        job = getattr(self, "win32_job", None)
-
-        if job is None:
-            return False
-
-        try:
-            import win32job
-
-            # Get the information from the job
-            enum_for_info = win32job.JobObjectExtendedLimitInformation
-            info = win32job.QueryInformationJobObject(job, enum_for_info)
-
-            # If the memory limit flag was set, unset it
-            mask = win32job.JOB_OBJECT_LIMIT_JOB_MEMORY
-            limits = info["BasicLimitInformation"]["LimitFlags"]
-            limits ^= limits & mask
-            info["BasicLimitInformation"]["LimitFlags"] = limits
-
-            # Set the job information with windows
-            win32job.SetInformationJobObject(job, enum_for_info, info)
-            return True
-
-        except Exception as e:
-            self._raise_warning(
-                f"Couldn't remove limit `memory` on Windows due to Error: {e}"
-                f"\n{traceback.format_exc()} "
-            )
-            return False

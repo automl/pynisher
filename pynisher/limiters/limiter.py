@@ -2,14 +2,31 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable
+from typing import Any, Callable, Type
 
 import platform
 import sys
 import traceback
 from multiprocessing.connection import Connection
 
-from pynisher.util import Monitor
+from pynisher.exceptions import (
+    CpuTimeoutException,
+    MemoryLimitException,
+    PynisherException,
+    WallTimeoutException,
+)
+from pynisher.util import Monitor, terminate_process
+
+
+def is_err(err: Exception, err_type: str | Type[Exception]) -> bool:
+    """Return if err is of a given type"""
+    # Check name of class matches
+    a = isinstance(err_type, str) and type(err).__name__ == err_type
+
+    # Explictly check for just class, not subclass
+    b = isinstance(err_type, type) and type(err) == err_type
+
+    return a or b
 
 
 class Limiter(ABC):
@@ -21,7 +38,10 @@ class Limiter(ABC):
         output: Connection,
         memory: int | None = None,
         cpu_time: int | None = None,
+        wall_time: int | None = None,
         warnings: bool = True,
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] | None = None,
+        terminate_child_processes: bool = True,
     ) -> None:
         """
         Parameters
@@ -38,14 +58,28 @@ class Limiter(ABC):
         cpu_time : int | None = None
             The cpu time in seconds to allocate
 
+        wall_time : int | None = None
+            The amount of total wall time in seconds to limit to
+
         warnings : bool = True
             Whether to emit pynisher warnings or not.
+
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] | None = None,
+            Whether to wrap exceptions or not, defaults ot builtins
+
+            Please see `pynisher.__init__` for details
+
+        terminate_child_processes: bool = True
+            Whether to clean up all child processes upon completion
         """
         self.func = func
         self.output = output
         self.memory = memory
         self.cpu_time = cpu_time
+        self.wall_time = wall_time
         self.warnings = warnings
+        self.wrap_errors = wrap_errors
+        self.terminate_child_processes = terminate_child_processes
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         """Set process limits and then call the function with the given arguments.
@@ -91,31 +125,28 @@ class Limiter(ABC):
             error = e
             tb = "".join(traceback.format_exception(*sys.exc_info()))
 
+        if error is not None:
+            error = self._wrap_error(error)
+
         # Now let's try to send the result back
         response = (result, error, tb)
         try:
             self.output.send(response)
             self.output.close()
+            if self.terminate_child_processes is True:
+                terminate_process(timeout=2, children=True, parent=False)
             return
         except Exception as e:
             failed_send_tb = "".join(traceback.format_exception(*sys.exc_info()))
             failed_send_response = (None, e, failed_send_tb)
 
-        # Maybe we can remove memory limit and try again
-        if self._try_remove_memory_limit():
-            try:
-                self.output.send(response)
-                self.output.close()
-                return
-            except Exception as e:
-                failed_send_tb = "".join(traceback.format_exception(*sys.exc_info()))
-                failed_send_response = (None, e, failed_send_tb)
-
-        # At this point, lets just try to send the errors we got from the attempts
-        # at sending the original response
+        # We failed to send the result back, lets try to send the errors we got from
+        # doing so
         try:
             self.output.send(failed_send_response)
             self.output.close()
+            if self.terminate_child_processes is True:
+                terminate_process(timeout=2, children=True, parent=False)
             return
         except Exception:
             pass
@@ -126,6 +157,8 @@ class Limiter(ABC):
             self.output.send(last_response_attempt)
         finally:
             self.output.close()
+            if self.terminate_child_processes is True:
+                terminate_process(timeout=2, children=True, parent=False)
             return
 
     @staticmethod
@@ -134,7 +167,10 @@ class Limiter(ABC):
         output: Connection,
         memory: int | None = None,
         cpu_time: int | None = None,
+        wall_time: int | None = None,
         warnings: bool = True,
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] | None = None,
+        terminate_child_processes: bool = True,
     ) -> Limiter:
         """For full documentation, see __init__."""
         # NOTE: __init__ param duplication
@@ -147,6 +183,8 @@ class Limiter(ABC):
             "memory": memory,
             "cpu_time": cpu_time,
             "warnings": warnings,
+            "wrap_errors": wrap_errors,
+            "terminate_child_processes": terminate_child_processes,
         }
 
         # There is probably a lot more identifiers but for now this covers our use case
@@ -192,17 +230,66 @@ class Limiter(ABC):
         """Limit's the cpu time of this process."""
         ...
 
-    @abstractmethod
-    def _try_remove_memory_limit(self) -> bool:
-        """Remove the memory limit if it can
-
-        Returns
-        -------
-        success: bool
-            Whether it was successful or not
-        """
-        ...
-
     def _raise_warning(self, msg: str) -> None:
         if self.warnings is True:
             print(msg, file=sys.stderr)
+
+    @staticmethod
+    def _get_builtin_exceptions() -> set[Type[Exception]]:
+        return {ImportError, OSError}
+
+    def _wrap_error(self, err: Exception) -> Exception:
+        # Wrap errors if indicated
+        if isinstance(err, MemoryError):
+            err = MemoryLimitException()
+
+        if self.wrap_errors is False:
+            return err
+        elif self.wrap_errors is True:
+            return PynisherException()
+
+        elif isinstance(self.wrap_errors, (list, set, tuple)):
+            if any(is_err(err, err_type) for err_type in self.wrap_errors):
+                return PynisherException()
+        elif isinstance(self._wrap_error, dict):
+            mapping = self.wrap_errors
+
+            if "cpu_time" in mapping and self.cpu_time is not None:
+                if any(is_err(err, err_type) for err_type in mapping["cpu_time"]):
+                    return CpuTimeoutException()
+
+            if "wall_time" in mapping and self.wall_time is not None:
+                if any(is_err(err, err_type) for err_type in mapping["wall_time"]):
+                    return WallTimeoutException()
+
+            elif "memory" in mapping and self.memory is not None:
+                for t in mapping["memory"]:
+                    # Windows specific errors
+                    if isinstance(t, tuple) and len(t) == 3:
+                        errT, errno, winerr = t
+
+                        is_type = isinstance(err, errT)
+                        has_errno = getattr(err, "errno", None) == errno
+                        has_winerr = getattr(err, "winerr", None) == winerr
+
+                        if is_type and has_errno and has_winerr:
+                            return MemoryLimitException()
+
+                    # OSError with codes
+                    elif isinstance(t, tuple) and len(t) == 2:
+                        errT, errno, winerr = t
+
+                        is_type = isinstance(err, errT)
+                        has_errno = getattr(err, "errno", None) == errno
+
+                        if is_type and has_errno:
+                            return MemoryLimitException()
+
+                    elif isinstance(err, t):
+                        return MemoryLimitException()
+        else:
+            raise NotImplementedError(
+                f"`wrap_errors` is ill formatted {self.wrap_errors}"
+            )
+
+        return err
