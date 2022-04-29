@@ -251,7 +251,7 @@ class Limiter(ABC):
         elif isinstance(self.wrap_errors, (list, set, tuple)):
             if any(is_err(err, err_type) for err_type in self.wrap_errors):
                 return PynisherException()
-        elif isinstance(self._wrap_error, dict):
+        elif isinstance(self.wrap_errors, dict):
             mapping = self.wrap_errors
 
             if "cpu_time" in mapping and self.cpu_time is not None:
