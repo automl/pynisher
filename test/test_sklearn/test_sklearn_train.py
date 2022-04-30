@@ -27,7 +27,7 @@ from pynisher.util import Monitor, memconvert
 import pytest
 
 
-def train_svr(model: Any, X: np.ndarray, y: np.ndarray, limit: int) -> bool:
+def train_svr(model: Any, X: np.ndarray, y: np.ndarray, limit: Any) -> bool:
     """Trains an svr model"""
     m = Monitor()
     print("Memory before fit", m.memory("mb"))
@@ -67,14 +67,13 @@ def test_train_svr_memory(context: str) -> None:
 
     # Seem fit will consume about 28mb extra, see __main__
     # Add 1MB
-    current_usage = round(m.memory("B"))
-    too_little_mem = current_usage + round(memconvert(1, frm="MB"))
+    too_little_mem = round(m.memory("MB") + memconvert(1, frm="MB"))
 
-    lf = limit(train_svr, memory=(too_little_mem, "B"))
+    lf = limit(train_svr, memory=(too_little_mem, "MB"))
 
     completed = False
     with pytest.raises(MemoryLimitException):
-        completed = lf(model, X, y, memconvert(too_little_mem, to="mb"))
+        completed = lf(model, X, y, too_little_mem)
 
     assert completed is not True
     assert lf._process is not None and not lf._process.is_running()

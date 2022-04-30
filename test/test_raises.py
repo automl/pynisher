@@ -43,7 +43,6 @@ def test_raises_with_args(context: str) -> None:
     """
     with Pynisher(raises_error, raises=True, context=context) as rf:
         with pytest.raises(CustomException) as e:
-            e = CustomException("apple")
-            rf(e)
+            rf(CustomException("apple"))
 
-        assert e.args[0] == "apple"
+        assert e.value.args[0] == "apple"

@@ -34,7 +34,7 @@ def test_success(limit: int, context: str) -> None:
 
     Hence, we skip if the test limit is not enough
     """
-    allocate = limit / 3
+    allocate = int(limit / 3)
 
     current_usage = Monitor().memory("MB")
     expected_usage = current_usage + allocate

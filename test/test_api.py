@@ -44,19 +44,6 @@ def test_call(context: str) -> None:
 
 
 @pytest.mark.parametrize("context", contexts)
-def test_run(context: str) -> None:
-    """
-    Expects
-    -------
-    * Should be able to explicitly call run on the restricted function
-    """
-    pynisher = Pynisher(get_process_id, context=context)
-    this_process_id = os.getpid()
-    other_process_id = pynisher.run()
-    assert this_process_id != other_process_id
-
-
-@pytest.mark.parametrize("context", contexts)
 def test_limit_usage(context: str) -> None:
     """
     Expects

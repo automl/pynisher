@@ -31,7 +31,8 @@ def pynish_success(x: Any, context: str) -> Any:
 def pynish_custom(context: str) -> int:
     """Will pynish a function and exceed memory"""
     lf = limit(raises_error, context=context)
-    return lf(CustomException)
+    lf(CustomException)
+    return 4
 
 
 def pynish_memory(context: str) -> int:
