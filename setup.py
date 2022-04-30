@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 readme = Path(__file__).parent / "README.md"
 
@@ -12,7 +12,11 @@ setup(
     version="0.7.0",
     packages=find_packages(where=".", include=["pynisher*"], exclude=["test*"]),
     include_package_data=True,
-    install_requires=["psutil", "pywin32; platform_system=='Windows'"],
+    install_requires=[
+        "psutil",
+        "typing_extensions",
+        "pywin32; platform_system=='Windows'",
+    ],
     extras_require={
         "test": [
             "pytest",

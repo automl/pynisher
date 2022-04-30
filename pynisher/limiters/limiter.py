@@ -9,6 +9,7 @@ import sys
 import traceback
 from multiprocessing.connection import Connection
 
+from pynisher.errcodes import WIN_ERROR_COMMITMENT_LIMIT
 from pynisher.exceptions import (
     CpuTimeoutException,
     MemoryLimitException,
@@ -235,57 +236,75 @@ class Limiter(ABC):
             print(msg, file=sys.stderr)
 
     def _wrap_error(self, err: Exception) -> Exception:
-        # Wrap errors if indicated
-        if isinstance(err, MemoryError):
-            err = MemoryLimitException()
+
+        _wrap_message = f"Wrapped Exception {type(err).__name__} - {err}"
+
+        # Catch memory errors first, these don't count as `wrap_errors=False`
+        # as we need to catch memory errors that occur due to limits
+        if self.memory and (
+            isinstance(err, MemoryError)
+            or (
+                sys.platform.lower().startswith("win")
+                and isinstance(err, OSError)
+                and getattr(err, "winerr", None) == WIN_ERROR_COMMITMENT_LIMIT
+            )
+        ):
+            return MemoryLimitException(_wrap_message)
 
         if self.wrap_errors is False:
             return err
-        elif self.wrap_errors is True:
-            return PynisherException()
 
-        elif isinstance(self.wrap_errors, (list, set, tuple)):
-            if any(is_err(err, err_type) for err_type in self.wrap_errors):
-                return PynisherException()
+        if self.wrap_errors is True:
+            return PynisherException(_wrap_message)
+
+        if isinstance(self.wrap_errors, (list, set, tuple)):
+            mapping = {"all": self.wrap_errors}
         elif isinstance(self.wrap_errors, dict):
             mapping = self.wrap_errors
-
-            if "cpu_time" in mapping and self.cpu_time is not None:
-                if any(is_err(err, err_type) for err_type in mapping["cpu_time"]):
-                    return CpuTimeoutException()
-
-            if "wall_time" in mapping and self.wall_time is not None:
-                if any(is_err(err, err_type) for err_type in mapping["wall_time"]):
-                    return WallTimeoutException()
-
-            elif "memory" in mapping and self.memory is not None:
-                for t in mapping["memory"]:
-                    # Windows specific errors
-                    if isinstance(t, tuple) and len(t) == 3:
-                        errT, errno, winerr = t
-
-                        is_type = isinstance(err, errT)
-                        has_errno = getattr(err, "errno", None) == errno
-                        has_winerr = getattr(err, "winerr", None) == winerr
-
-                        if is_type and has_errno and has_winerr:
-                            return MemoryLimitException()
-
-                    # OSError with codes
-                    elif isinstance(t, tuple) and len(t) == 2:
-                        errT, errno, winerr = t
-
-                        is_type = isinstance(err, errT)
-                        has_errno = getattr(err, "errno", None) == errno
-
-                        if is_type and has_errno:
-                            return MemoryLimitException()
-
-                    elif isinstance(err, t):
-                        return MemoryLimitException()
         else:
-            raise NotImplementedError(
-                f"`wrap_errors` is ill formatted {self.wrap_errors}"
-            )
+            raise ValueError(f"Arg `wrap_errors` is ill formatted {self.wrap_errors}")
+
+        mapping = self.wrap_errors
+
+        if self.cpu_time is not None and "cpu_time" in mapping:
+            if any(is_err(err, err_type) for err_type in mapping["cpu_time"]):
+                return CpuTimeoutException(_wrap_message)
+
+        if self.wall_time is not None and "wall_time" in mapping:
+            if any(is_err(err, err_type) for err_type in mapping["wall_time"]):
+                return WallTimeoutException(_wrap_message)
+
+        if self.memory is not None and "memory" in mapping:
+
+            for t in mapping["memory"]:
+
+                # Windows specific errors
+                if isinstance(t, tuple) and len(t) == 3:
+                    errT, errno, winerr = t
+
+                    is_type = isinstance(err, errT)
+                    has_errno = getattr(err, "errno", None) == errno
+                    has_winerr = getattr(err, "winerr", None) == winerr
+
+                    if is_type and has_errno and has_winerr:
+                        return MemoryLimitException(_wrap_message)
+
+                # OSError with codes
+                elif isinstance(t, tuple) and len(t) == 2:
+                    errT, errno, winerr = t
+
+                    is_type = isinstance(err, errT)
+                    has_errno = getattr(err, "errno", None) == errno
+
+                    if is_type and has_errno:
+                        return MemoryLimitException(_wrap_message)
+
+                # `t` is just a straight Exception
+                elif isinstance(err, t):  # type: ignore
+                    return MemoryLimitException(_wrap_message)
+
+        if "pynisher" in mapping:
+            if any(is_err(err, err_type) for err_type in mapping["pynisher"]):
+                return PynisherException(_wrap_message)
 
         return err

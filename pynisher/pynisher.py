@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Type, TypeVar
+from typing import Any, Callable, Generic, Type, TypeVar, overload
 
 import multiprocessing
 import signal
 import sys
-from contextlib import ContextDecorator
 from functools import wraps
 
 import psutil
+from typing_extensions import Literal, ParamSpec
 
+from pynisher.errcodes import WIN_EXITCODE_CPUTIMEOUT
 from pynisher.exceptions import (
     CpuTimeoutException,
     MemoryLimitException,
@@ -21,15 +22,64 @@ from pynisher.support import contexts as valid_contexts
 from pynisher.support import supports
 from pynisher.util import callstring, memconvert, terminate_process, timeconvert
 
-EMPTY = object()
+
+class _EMPTY:
+    pass
 
 
-class Pynisher(ContextDecorator):
+EMPTY = _EMPTY()
+
+# For typing the pynished function
+T = TypeVar("T")
+P = ParamSpec("P")
+
+# For returning the same type as itself, see __enter__
+Self = TypeVar("Self")
+
+
+class Pynisher(Generic[P, T]):
     """Restrict a function's resources"""
+
+    # If `raises=True` or left as default, the return type when calling is just T
+    @overload
+    def __init__(
+        self: Pynisher[P, T],
+        func: Callable[P, T],
+        *,
+        raises: Literal[True] = ...,
+        name: str | None = ...,
+        memory: int | tuple[int, str] | None = ...,
+        cpu_time: int | tuple[float, str] | None = ...,
+        wall_time: int | tuple[float, str] | None = ...,
+        context: str | None = ...,
+        warnings: bool = ...,
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
+        terminate_child_processes: bool = ...,
+    ) -> None:
+        ...
+
+    # If `raises=False` or just some unknown bool value,
+    # the return type when calling is T | _EMPTY
+    @overload
+    def __init__(
+        self: Pynisher[P, T | _EMPTY],
+        func: Callable[P, T],
+        *,
+        raises: bool,
+        name: str | None = ...,
+        memory: int | tuple[int, str] | None = ...,
+        cpu_time: int | tuple[float, str] | None = ...,
+        wall_time: int | tuple[float, str] | None = ...,
+        context: str | None = ...,
+        warnings: bool = ...,
+        wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
+        terminate_child_processes: bool = ...,
+    ) -> None:
+        ...
 
     def __init__(
         self,
-        func: Callable,
+        func: Callable[P, T],
         *,
         name: str | None = None,
         memory: int | tuple[int, str] | None = None,
@@ -200,7 +250,7 @@ class Pynisher(ContextDecorator):
         # Set once the function is running
         self._process: psutil.Process | None = None
 
-    def __enter__(self) -> Callable:
+    def __enter__(self: Self) -> Self:
         """Doesn't do anything too useful at the moment.
 
         Returns
@@ -208,7 +258,7 @@ class Pynisher(ContextDecorator):
         (*args, **kwargs) -> Any
             Call your function and get back the result
         """
-        return self.run
+        return self
 
     def __exit__(self, *exc: Any) -> None:
         """Doesn't do anything too useful at the moment.
@@ -222,22 +272,25 @@ class Pynisher(ContextDecorator):
         # *https://docs.python.org/3/reference/datamodel.html#object.__exit__
         return
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        """Run the function with the given set of arguments and block until result.
+    # Call with `raises=True`
+    @overload
+    def __call__(
+        self: Pynisher[P, T],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        ...
 
-        Parameters
-        ----------
-        *args, **kwargs
-            Parameters to pass to the function being limited
+    # Call with `raises=False`
+    @overload
+    def __call__(
+        self: Pynisher[P, T | _EMPTY],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T | _EMPTY:
+        ...
 
-        Returns
-        -------
-        Any
-            The result of calling the function that is being limited
-        """
-        return self.run(*args, **kwargs)
-
-    def run(self, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> T | _EMPTY:
         """Run the function with the given set of arguments and block until result.
 
         Parameters
@@ -271,29 +324,16 @@ class Pynisher(ContextDecorator):
         # __call__ with the args and kwargs for the function being limited
         subprocess = self.context.Process(
             target=limiter.__call__,
-            args=args,
-            kwargs=kwargs,
+            args=args,  # type: ignore
+            kwargs=kwargs,  # type: ignore
             daemon=False,
             name=self.name,
         )
 
-        # 4 kinds of `response` we expect
-        #
-        # * (result, None, None)    | success
-        #                               => No error, we got a result
-        # * (None, error, traceback)| failed
-        #                               =>  Error, CPUtimeout linux/mac, MemoryError
-        # * None                    | failed
-        #                               => MemoryError during sending of real error
-        # * EMPTY                   | failed, nothing received from pipe
-        #                               => Walltime, CPUTimeout windows, Unknown
-        result = EMPTY
-        err: Exception | None = None
-        tb: str | None = None
-
         # Let loose
         subprocess.start()
 
+        # Get a psutil handle to the process
         try:
             self._process = psutil.Process(subprocess.pid)
         except psutil.NoSuchProcess:
@@ -314,102 +354,134 @@ class Pynisher(ContextDecorator):
 
         if self._process is not None:
             terminate_process(
-                self._process, children=self.terminate_child_processes, parent=True
+                subprocess.pid,
+                children=self.terminate_child_processes,
+                parent=True,
             )
+
+        # 4 kinds of `response` we expect
+        #
+        # * (result, None, None)    | success
+        #                               => No error, we got a result
+        # * (None, error, traceback)| failed
+        #                               =>  Error, CPUtimeout linux/mac, MemoryError
+        # * None                    | failed
+        #                               => MemoryError during sending of real error
+        # * EMPTY                   | failed, nothing received from pipe
+        #                               => Walltime, CPUTimeout windows, Unknown
+        result: _EMPTY | T = EMPTY
+        err: Exception | None = None
+        tb: str | None = None
+
+        # Retrieve a result if we can,
+        if receive_pipe.poll() and not receive_pipe.closed:
+            try:
+                response = receive_pipe.recv()
+                if response is not None:
+                    result, err, tb = response
+                else:
+                    result = EMPTY
+                    tb = None
+                    err = MemoryLimitException(
+                        "While returning the result from your function,"
+                        " we could not retrieve the result or any error"
+                        " about why."
+                        f"\n{callstring(self.func, *args, **kwargs)}",
+                    )
+
+            # Otherwise, there was nothing to read
+            except EOFError:
+                result = EMPTY
+                tb = None
+                err = MemoryLimitException(
+                    "There but could not a send response back."
+                    " This is likely a MemoryError."
+                    f"\n{callstring(self.func, *args, **kwargs)}"
+                )
+
+        # Cleanup pipes
+        receive_pipe.close()
+        send_pipe.close()
+
+        # We got a result or an error
+        if result is not EMPTY or err is not None:
+            return self._handle_return(result=result, err=err, tb=tb)
+
+        # Process ended gracefully but no result?
+        if exitcode == 0:
+            err = PynisherException(
+                f"Function ended properly but no result was recieved."
+                f" Got exitcode 0 from subprocess that ran:"
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+            return self._handle_return(err=err)
 
         # Wall time expired
         if exitcode is None:
-            result = EMPTY
             err = WallTimeoutException(
                 f"Did not finish in time ({self.wall_time}s)"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
+            return self._handle_return(err=err)
 
-        # Completed gracefully
-        elif exitcode == 0:
-
-            # Pipe has data in it or has been closed properly
-            if receive_pipe.poll():
-
-                # If there is data, it will be read
-                try:
-                    response = receive_pipe.recv()
-                    if response is None:
-                        result = EMPTY
-                        err = MemoryLimitException(
-                            "While returning the result from your function,"
-                            " we could not retrieve the result or any error"
-                            " about why."
-                            f"\n{callstring(self.func, *args, **kwargs)}"
-                        )
-                    else:
-                        result, err, tb = response
-                        # If we have an err, that excludes possible results
-                        if err is not None:
-                            result = EMPTY
-
-                # Otherwise, there was nothing to read
-                except EOFError:
-                    result = EMPTY
-                    err = MemoryLimitException(
-                        "Ended gracefully but could not a send response back."
-                        " This is likely a MemoryError."
-                        f"\n{callstring(self.func, *args, **kwargs)}"
-                    )
-
-            else:
-                raise PynisherException(
-                    "The process exited with exitcode 0, signifying it ended gracefully"
-                    " but the subprocess pipe is still open and there is no data to"
-                    " recieve. This should not happen. Please raise an issue with your"
-                    " code that caused this expcetion, if possible"
-                )
-
-        # If did not exit gracefully but cpu time was set and it's windows
-        elif (
-            exitcode != 0
+        # Cputime expired on windows
+        if (
+            exitcode == WIN_EXITCODE_CPUTIMEOUT
             and self.cpu_time is not None
             and sys.platform.lower().startswith("win")
         ):
-            result = EMPTY
             err = CpuTimeoutException(
                 f"Did not finish in cpu time ({self.cpu_time}s)"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
+            return self._handle_return(err=err)
 
-        elif exitcode == -signal.SIGSEGV and self.memory is not None:
-            result = EMPTY
+        # We got a segmentation fault, if memomory was set, we assume it's a memory
+        # related issue
+        if exitcode == -signal.SIGSEGV and self.memory is not None:
             err = MemoryLimitException(
                 "The function exited with a segmentation error (SIGSEGV) and a memory"
                 " limit was set. We presume this is due to the memory limit set."
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
+            return self._handle_return(err=err)
 
-        elif hasattr(signal, "SIGXCPU") and exitcode == -signal.SIGXCPU:
-            result = EMPTY
+        # We got a SIGXCPU and cputime was set
+        if (
+            self.cpu_time is not None
+            and hasattr(signal, "SIGXCPU")
+            and exitcode == -signal.SIGXCPU
+        ):
             err = CpuTimeoutException(
                 f"Did not finish in cpu time ({self.cpu_time}s)"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
+            return self._handle_return(err=err)
 
-        # We shouldn't get here
-        else:
-            result = EMPTY
-            err = PynisherException(
-                f"Unknown reason for exitcode {exitcode} and killed process"
-                f"\n{callstring(self.func, *args, **kwargs)}"
-            )
+        # We didn't get a result and the pipe closed in some way we weren't expecting
+        err = PynisherException(
+            f"Unknown reason for exitcode {exitcode} and killed process"
+            f"\n{callstring(self.func, *args, **kwargs)}"
+        )
+        return self._handle_return(err=err)
 
-        receive_pipe.close()
-        send_pipe.close()
+    def _handle_return(
+        self,
+        result: T | _EMPTY = EMPTY,
+        err: Exception | None = None,
+        tb: str | None = None,
+    ) -> T | _EMPTY:
+        # We need at least an error or a result, not both
+        assert (result is EMPTY) ^ (err is None)
 
         # We got a non empty result, hurray
         if result is not EMPTY:
             return result
 
-        # We have an error
-        assert isinstance(err, Exception)
+        # Otherwise, we have some error
+        assert err is not None
 
+        # Don't raise?
         if not self.raises:
             return EMPTY
 
@@ -436,13 +508,36 @@ class Pynisher(ContextDecorator):
         return supports(limit)
 
 
-# NOTE: Can only use typevar on decorator
-#
-#   Since the typevar only exist in the indentation context, we can use it here for
-#   the full function scope to annotate the return type. To do so for Pynisher,
-#   we would have to make it generic, probably not worth the extra complexity
-#
-T = TypeVar("T")
+@overload
+def restricted(
+    *,
+    raises: Literal[True] = ...,
+    name: str | None = ...,
+    memory: int | tuple[int, str] | None = ...,
+    cpu_time: int | None = ...,
+    wall_time: int | None = ...,
+    context: str | None = ...,
+    warnings: bool = ...,
+    wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
+    terminate_child_processes: bool = ...,
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    ...
+
+
+@overload
+def restricted(
+    *,
+    raises: bool,
+    name: str | None = None,
+    memory: int | tuple[int, str] | None = None,
+    cpu_time: int | None = None,
+    wall_time: int | None = None,
+    context: str | None = None,
+    warnings: bool = True,
+    wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
+    terminate_child_processes: bool = True,
+) -> Callable[[Callable[P, T]], Callable[P, T | _EMPTY]]:
+    ...
 
 
 # NOTE: Simpler solution?
@@ -453,8 +548,8 @@ T = TypeVar("T")
 #   `Pynisher.__init__` should be the function itself. For now this should work
 #
 def restricted(
-    name: str | None = None,
     *,
+    name: str | None = None,
     memory: int | tuple[int, str] | None = None,
     cpu_time: int | None = None,
     wall_time: int | None = None,
@@ -463,7 +558,7 @@ def restricted(
     warnings: bool = True,
     wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
     terminate_child_processes: bool = True,
-) -> Callable[[Callable[..., T]], Callable[..., T]]:  # Lol ((...) -> T) -> ((...) -> T)
+) -> Callable[[Callable[P, T]], Callable[P, T | _EMPTY]]:
     """Limit a function's resource consumption on each call
 
     ..code:: python
@@ -538,9 +633,9 @@ def restricted(
     if callable(name):
         raise ValueError("Please pass arguments to decorator `@restricted`")
 
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+    def decorator(func: Callable[P, T]) -> Callable[P, T | _EMPTY]:
         @wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> T:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T | _EMPTY:
             pynisher = Pynisher(
                 func,
                 name=name,
@@ -550,7 +645,7 @@ def restricted(
                 raises=raises,
                 wrap_errors=wrap_errors,
             )
-            return pynisher.run(*args, **kwargs)
+            return pynisher(*args, **kwargs)
 
         return wrapper
 
