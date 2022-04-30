@@ -22,7 +22,7 @@ from pynisher import (
     limit,
     supports,
 )
-from pynisher.util import Monitor, memconvert
+from pynisher.util import Monitor
 
 import pytest
 
@@ -67,7 +67,7 @@ def test_train_svr_memory(context: str) -> None:
 
     # Seem fit will consume about 28mb extra, see __main__
     # Add 1MB
-    too_little_mem = round(m.memory("MB") + memconvert(1, frm="MB"))
+    too_little_mem = round(m.memory("MB") + 1)
 
     lf = limit(train_svr, memory=(too_little_mem, "MB"))
 

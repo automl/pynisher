@@ -405,6 +405,11 @@ class Pynisher(Generic[P, T]):
 
         # We got a result or an error
         if result is not EMPTY or err is not None:
+
+            # If an error, the result must be empty
+            if err is not None:
+                result = EMPTY
+
             return self._handle_return(result=result, err=err, tb=tb)
 
         # Process ended gracefully but no result?
@@ -510,9 +515,9 @@ class Pynisher(Generic[P, T]):
 
 @overload
 def restricted(
+    name: str | None = ...,
     *,
     raises: Literal[True] = ...,
-    name: str | None = ...,
     memory: int | tuple[int, str] | None = ...,
     cpu_time: int | None = ...,
     wall_time: int | None = ...,
@@ -526,16 +531,16 @@ def restricted(
 
 @overload
 def restricted(
+    name: str | None = ...,
     *,
     raises: bool,
-    name: str | None = None,
-    memory: int | tuple[int, str] | None = None,
-    cpu_time: int | None = None,
-    wall_time: int | None = None,
-    context: str | None = None,
-    warnings: bool = True,
-    wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
-    terminate_child_processes: bool = True,
+    memory: int | tuple[int, str] | None = ...,
+    cpu_time: int | None = ...,
+    wall_time: int | None = ...,
+    context: str | None = ...,
+    warnings: bool = ...,
+    wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
+    terminate_child_processes: bool = ...,
 ) -> Callable[[Callable[P, T]], Callable[P, T | _EMPTY]]:
     ...
 
@@ -547,9 +552,19 @@ def restricted(
 #   `@restricted(memory=...)` but that won't work as the first arg to
 #   `Pynisher.__init__` should be the function itself. For now this should work
 #
+# Note: Having one positional argument
+#
+#   This just lets us catch the cases where someone incorrectly uses the decorator as
+#   the first argument would be the function. Otherwise with only keyord arguments,
+#   you would get a python exception that just says function doesn't except positinal
+#   arguments
+#
+#   @restricted   # <- Should raise helpful error
+#   def f(): ...
+#
 def restricted(
-    *,
     name: str | None = None,
+    *,
     memory: int | tuple[int, str] | None = None,
     cpu_time: int | None = None,
     wall_time: int | None = None,

@@ -118,26 +118,26 @@ def terminate_process(
             timeout=timeout,
         )
     else:
-        try:
-            if not isinstance(pid, psutil.Process):
+        if isinstance(pid, psutil.Process):
+            process = pid
+        else:
+            try:
                 process = psutil.Process(pid)
-            else:
-                process = pid
+            except psutil.NoSuchProcess:
+                return ([], [])
 
-            process.send_signal(sig)
-            gone, alive = psutil.wait_procs(
-                [process], timeout=timeout, callback=on_terminate
-            )
+        process.send_signal(sig)
+        gone, alive = psutil.wait_procs(
+            [process], timeout=timeout, callback=on_terminate
+        )
 
-            for p in alive:
-                p.kill()
+        for p in alive:
+            p.kill()
 
-            gone, alive = psutil.wait_procs(
-                [process], timeout=timeout, callback=on_terminate
-            )
-            return (gone, alive)
-        except psutil.NoSuchProcess:
-            return ([process], [])
+        gone, alive = psutil.wait_procs(
+            [process], timeout=timeout, callback=on_terminate
+        )
+        return (gone, alive)
 
 
 def terminate_process_tree(
@@ -167,13 +167,13 @@ def terminate_process_tree(
     # Get the parent and its children
     try:
         if parent is None:
-            parent = psutil.Process(pid=pid)
+            parent = psutil.Process(pid=_pid)
 
         children = parent.children(recursive=True)
     except psutil.NoSuchProcess:
         children = []
 
-    if include_parent:
+    if include_parent and parent is not None:
         children.append(parent)
 
     for child in children:
