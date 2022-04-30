@@ -64,7 +64,7 @@ def test_terminate_child_processes_removes_all_children(
 
     lf = limit(
         spawn_children,
-        wall_time=2,
+        wall_time=5,
         terminate_child_processes=True,
         context=pynisher_context,
     )
@@ -115,7 +115,7 @@ def test_terminate_child_processes_false_keeps_children(
 
     lf = limit(
         spawn_children,
-        wall_time=2,
+        wall_time=5,
         terminate_child_processes=False,
         context=pynisher_context,
     )
