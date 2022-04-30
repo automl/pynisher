@@ -10,7 +10,6 @@ from functools import wraps
 import psutil
 from typing_extensions import Literal, ParamSpec
 
-from pynisher.errcodes import WIN_EXITCODE_CPUTIMEOUT
 from pynisher.exceptions import (
     CpuTimeoutException,
     MemoryLimitException,
@@ -21,6 +20,7 @@ from pynisher.limiters import Limiter
 from pynisher.support import contexts as valid_contexts
 from pynisher.support import supports
 from pynisher.util import callstring, memconvert, terminate_process, timeconvert
+from pynisher.win_errcodes import WIN_CPUTIMEOUT_EXITCODES, WIN_MEMORY_EXITCODES
 
 
 class _EMPTY:
@@ -431,12 +431,29 @@ class Pynisher(Generic[P, T]):
 
         # Cputime expired on windows
         if (
-            exitcode == WIN_EXITCODE_CPUTIMEOUT
+            sys.platform.lower().startswith("win")
             and self.cpu_time is not None
-            and sys.platform.lower().startswith("win")
+            and exitcode in WIN_CPUTIMEOUT_EXITCODES
         ):
             err = CpuTimeoutException(
-                f"Did not finish in cpu time ({self.cpu_time}s)"
+                f"Did not finish in cpu time ({self.cpu_time}s)."
+                f" Specific exitcode is {exitcode}"
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+            return self._handle_return(err=err)
+
+        # Memory reasons to kill process on windows
+        if (
+            sys.platform.lower().startswith("win")
+            and self.cpu_time is not None
+            and exitcode in WIN_MEMORY_EXITCODES
+        ):
+            # We can't be certain it was caused by a cputimeout but the exist status
+            # in this case is non-consisten and I do not know a way to identify the
+            # object timed out properly
+            err = MemoryLimitException(
+                f"Not enough memory to run function ({self.memory}B)."
+                f" Specific exitcode is {exitcode}"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
             return self._handle_return(err=err)

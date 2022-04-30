@@ -9,7 +9,6 @@ import sys
 import traceback
 from multiprocessing.connection import Connection
 
-from pynisher.errcodes import WIN_ERROR_COMMITMENT_LIMIT
 from pynisher.exceptions import (
     CpuTimeoutException,
     MemoryLimitException,
@@ -17,6 +16,7 @@ from pynisher.exceptions import (
     WallTimeoutException,
 )
 from pynisher.util import Monitor, terminate_process
+from pynisher.win_errcodes import WIN_ERROR_COMMITMENT_LIMIT
 
 
 def is_err(err: Exception, err_type: str | Type[Exception]) -> bool:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import multiprocessing
 import os
+import sys
 import time
 
 import psutil
@@ -62,6 +63,16 @@ def test_terminate_child_processes_removes_all_children(
             "'forkserver' to spawn new processes."
         )
 
+    if (
+        pynisher_context == "spawn"
+        and child_context == "fork"
+        and sys.version_info < (3, 8)
+    ):
+        pytest.skip(
+            "Python 3.7 doesn't seem to allow for a 'spawn' process function"
+            " to create new subprocesses with 'fork'"
+        )
+
     lf = limit(
         spawn_children,
         wall_time=5,
@@ -105,6 +116,16 @@ def test_terminate_child_processes_false_keeps_children(
         pytest.skip(
             "Doesn't seem to like when pyisher uses 'fork' while the child uses"
             "'forkserver' to spawn new processes."
+        )
+
+    if (
+        pynisher_context == "spawn"
+        and child_context == "fork"
+        and sys.version_info < (3, 8)
+    ):
+        pytest.skip(
+            "Python 3.7 doesn't seem to allow for a 'spawn' process function"
+            " to create new subprocesses with 'fork'"
         )
 
     if daemon is False:

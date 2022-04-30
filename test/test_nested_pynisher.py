@@ -1,5 +1,7 @@
 from typing import Any, Callable, Type
 
+import sys
+
 import psutil
 
 from pynisher import (
@@ -20,10 +22,12 @@ class CustomException(Exception):
 
 
 def echo(x: Any) -> Any:
+    """Just echos back anything given to it"""
     return x
 
 
 def pynish_success(x: Any, context: str) -> Any:
+    """A successful pynished function"""
     lf = limit(echo, context=context)
     return lf(x)
 
@@ -91,6 +95,12 @@ def test_two_level_fail_second_level(
             "'forkserver' to spawn new processes."
         )
 
+    if root_context == "spawn" and sub_context == "fork" and sys.version_info < (3, 8):
+        pytest.skip(
+            "Python 3.7 doesn't seem to allow for a 'spawn' process function"
+            " to create new subprocesses with 'fork'"
+        )
+
     lf = limit(func, **top_limit, context=root_context)
     with pytest.raises(err):
         lf(context=sub_context)
@@ -121,6 +131,12 @@ def test_two_level_success_result(root_context: str, sub_context: str) -> None:
         pytest.skip(
             "Doesn't seem to like when pyisher uses 'fork' while the child uses"
             "'forkserver' to spawn new processes."
+        )
+
+    if root_context == "spawn" and sub_context == "fork" and sys.version_info < (3, 8):
+        pytest.skip(
+            "Python 3.7 doesn't seem to allow for a 'spawn' process function"
+            " to create new subprocesses with 'fork'"
         )
 
     lf = limit(pynish_success, context=root_context)
