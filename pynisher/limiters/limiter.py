@@ -258,13 +258,11 @@ class Limiter(ABC):
             return PynisherException(_wrap_message)
 
         if isinstance(self.wrap_errors, (list, set, tuple)):
-            mapping = {"all": self.wrap_errors}
+            mapping = {"pynisher": self.wrap_errors}
         elif isinstance(self.wrap_errors, dict):
             mapping = self.wrap_errors
         else:
             raise ValueError(f"Arg `wrap_errors` is ill formatted {self.wrap_errors}")
-
-        mapping = self.wrap_errors
 
         if self.cpu_time is not None and "cpu_time" in mapping:
             if any(is_err(err, err_type) for err_type in mapping["cpu_time"]):
@@ -282,7 +280,7 @@ class Limiter(ABC):
                 if isinstance(t, tuple) and len(t) == 3:
                     errT, errno, winerr = t
 
-                    is_type = isinstance(err, errT)
+                    is_type = is_err(err, errT)
                     has_errno = getattr(err, "errno", None) == errno
                     has_winerr = getattr(err, "winerr", None) == winerr
 
@@ -293,14 +291,14 @@ class Limiter(ABC):
                 elif isinstance(t, tuple) and len(t) == 2:
                     errT, errno, winerr = t
 
-                    is_type = isinstance(err, errT)
+                    is_type = is_err(err, errT)
                     has_errno = getattr(err, "errno", None) == errno
 
                     if is_type and has_errno:
                         return MemoryLimitException(_wrap_message)
 
                 # `t` is just a straight Exception
-                elif isinstance(err, t):  # type: ignore
+                elif is_err(err, t):  # type: ignore
                     return MemoryLimitException(_wrap_message)
 
         if "pynisher" in mapping:

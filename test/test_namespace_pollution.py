@@ -1,3 +1,5 @@
+from typing import Any
+
 import sys
 
 from pynisher import PynisherException, contexts, limit
@@ -14,18 +16,21 @@ def import_sklearn() -> None:
 
 
 @pytest.mark.parametrize("context", contexts)
-def test_not_in_namespace(context: str) -> None:
+@pytest.mark.parametrize(
+    "wrap_errors", [True, ["NotFittedError"], {"pynisher": ["NotFittedError"]}]
+)
+def test_not_in_namespace(context: str, wrap_errors: Any) -> None:
     """
     Expects
     -------
     * If wrapping exceptions from a locally imported namespace,
       the error should leak no namespaces into the master process
     """
-    with limit(import_sklearn, context=context, wrap_errors=True) as lf:
+    with limit(import_sklearn, context=context, wrap_errors=wrap_errors) as lf:
 
         try:
             lf()
-        except PynisherException as e:
-            print(e.args)
+        except PynisherException:
+            pass
 
     assert "sklearn" not in sys.modules.keys()

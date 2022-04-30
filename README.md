@@ -268,6 +268,49 @@ the duration it ran, please do so outside of `Pynisher`.
 
 The exceptions were also changed, please see [Exceptions][#Exceptions]
 
+## Controlling namespace pollution
+As an advanced use case, sometimes you might want to keep the modules imported for your
+limited function to be local only, preventing this from leaking to the main process that
+runs created the limited function. You have three ways to control that the locally imported
+error does not pollute the main namespace.
+
+```python
+import sys
+from pynisher import PynisherException, limit
+
+def import_sklearn() -> None:
+    """Imports sklearn into a local namespace and has an sklearn object in its args"""
+    from sklearn.exceptions import NotFittedError
+    from sklearn.svm import SVR
+
+    assert "sklearn" in sys.modules.keys()
+    raise NotFittedError(SVR())
+
+
+if __name__ == "__main__"
+    # Wrapping all errors
+    lf = limit(import_sklearn, wrap_errors=True)
+    try:
+        lf()
+    except PynisherException:
+        assert "sklearn" not in sys.modules.keys()
+
+    # Wrapping only specific errors
+    lf = limit(import_sklearn, wrap_errors=["NotFittedError"])
+    try:
+        lf()
+    except PynisherException:
+        assert "sklearn" not in sys.modules.keys()
+
+    # Wrapping that error specifically as a PynisherException
+    lf = limit(import_sklearn, wrap_errors={"pynisher": ["NotFittedError"]})
+    try:
+        lf()
+    except PynisherException:
+        assert "sklearn" not in sys.modules.keys()
+```
+
+
 ## Pynisher and Multithreading
 When Pynisher is used together with the Python Threading library, it is possible to run into
 a deadlock when using the standard ``fork`` method to start new processes as described in

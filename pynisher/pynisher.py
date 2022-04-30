@@ -228,7 +228,7 @@ class Pynisher(Generic[P, T]):
             raise ValueError(f"`context` {context} must be in {valid_contexts}")
 
         if isinstance(wrap_errors, dict):
-            valid_keys = {"memory", "wall_time", "cpu_time", "all"}
+            valid_keys = {"memory", "wall_time", "cpu_time", "pynisher"}
             keys = list(wrap_errors.keys())
             if not all(key in valid_keys for key in keys):
                 raise ValueError(
