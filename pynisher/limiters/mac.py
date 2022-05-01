@@ -44,7 +44,7 @@ class LimiterMac(Limiter):
         #   This signal is raised when `setitimer(time)` elapses.
         #   It measures the sys + user time used while the process is executing
         #   * https://docs.python.org/3/library/signal.html#signal.setitimer
-        if signum == signal.SIGPROF:
+        if signum == signal.SIGXCPU:
             terminate_process(parent=False)
             raise CpuTimeoutException()
 
