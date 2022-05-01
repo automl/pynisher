@@ -15,7 +15,7 @@ from pynisher.exceptions import (
     PynisherException,
     WallTimeoutException,
 )
-from pynisher.util import Monitor, terminate_process
+from pynisher.util import Monitor, callstring, terminate_process
 from pynisher.win_errcodes import WIN_ERROR_COMMITMENT_LIMIT
 
 
@@ -127,7 +127,7 @@ class Limiter(ABC):
             tb = "".join(traceback.format_exception(*sys.exc_info()))
 
         if error is not None:
-            error = self._wrap_error(error)
+            error = self._wrap_error(error, *args, **kwargs)
 
         # Now let's try to send the result back
         response = (result, error, tb)
@@ -235,7 +235,7 @@ class Limiter(ABC):
         if self.warnings is True:
             print(msg, file=sys.stderr)
 
-    def _wrap_error(self, err: Exception) -> Exception:
+    def _wrap_error(self, err: Exception, *args: Any, **kwargs: Any) -> Exception:
 
         _wrap_message = f"Wrapped Exception {type(err).__name__} - {err}"
 
@@ -249,7 +249,16 @@ class Limiter(ABC):
                 and getattr(err, "winerr", None) == WIN_ERROR_COMMITMENT_LIMIT
             )
         ):
-            return MemoryLimitException(_wrap_message)
+            err = MemoryLimitException(
+                f"Not enough memory to run function ({self.memory}B)."
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+
+        if self.cpu_time and isinstance(err, CpuTimeoutException):
+            err = CpuTimeoutException(
+                f"Did not finish in cpu time ({self.cpu_time}s)"
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
 
         if self.wrap_errors is False:
             return err
