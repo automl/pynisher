@@ -97,6 +97,7 @@ def test_import_fail_all() -> None:
     * Should fail to import but give a PynisherException as we can't properly
       identify that it's root cause is due to memory
     """
+    m = Monitor()
     print("Before job ", m.memory("mb"))
     with pytest.raises(PynisherException) as e:
         with limit(import_sklearn, wrap_errors=True, memory=(100, "mb")) as lf:
