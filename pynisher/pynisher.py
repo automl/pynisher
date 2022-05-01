@@ -352,12 +352,11 @@ class Pynisher(Generic[P, T]):
         #               | and it may not be closed
         exitcode = subprocess.exitcode
 
-        if self._process is not None:
-            terminate_process(
-                subprocess.pid,
-                children=self.terminate_child_processes,
-                parent=True,
-            )
+        terminate_process(
+            subprocess.pid,
+            children=self.terminate_child_processes,
+            parent=True,
+        )
 
         # 4 kinds of `response` we expect
         #

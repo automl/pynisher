@@ -33,15 +33,17 @@ def walltime_sleep(sleep: float) -> float:
     return sleep
 
 
-def cputime_sleep(sleep: float) -> float:
+def cputime_sleep(sleep: float) -> tuple[float, int]:
     """Keeps cpu busy for `sleep` seconds"""
     start = time.process_time()
+    x = 0
     while True:
+        x = x + 1
         duration = time.process_time() - start
         if duration > sleep:
             break
 
-    return duration
+    return (duration, x)
 
 
 def usememory(x: int | tuple[int, str]) -> int:

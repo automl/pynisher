@@ -7,6 +7,7 @@ import os
 import sys
 
 from pynisher import MemoryLimitException, PynisherException, limit
+from pynisher.util import Monitor
 
 import pytest
 
@@ -19,7 +20,12 @@ plat = sys.platform.lower()
 
 def import_sklearn() -> bool:
     """Just imports sklearn"""
+    m = Monitor()
+    print("Before import ", m.memory("mb"))
+
     import sklearn  # noqa
+
+    print("After import ", m.memory("mb"))
 
     return True
 
@@ -60,6 +66,7 @@ def test_import_fail_windows() -> None:
     There's no automatic way to identfiy this from a regular OSError so we better
     be explicit about it.
     """
+    print("Before job ", m.memory("mb"))
     with pytest.raises(MemoryLimitException) as e:
         with limit(
             import_sklearn,
@@ -90,6 +97,7 @@ def test_import_fail_all() -> None:
     * Should fail to import but give a PynisherException as we can't properly
       identify that it's root cause is due to memory
     """
+    print("Before job ", m.memory("mb"))
     with pytest.raises(PynisherException) as e:
         with limit(import_sklearn, wrap_errors=True, memory=(100, "mb")) as lf:
             lf()
@@ -115,8 +123,6 @@ if __name__ == "__main__":
     * After Import sklearn =  671.28515625
 
     """
-    from pynisher.util import Monitor
-
     m = Monitor()
     print("Before import = ", m.memory("mb"))
 

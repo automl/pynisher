@@ -1,11 +1,25 @@
 """
+Useful info for invesetigating memory:
+* MacOS uses Darwin-XNU as it's underlying operating system. This is easier to find as
+just XNU.
+* XNU uses a special memory manager called Mach-VM in its interface to which we have no
+control
+* Darwin-xnu: https://github.com/apple/darwin-xnu
+* resource.h: https://github.com/apple/darwin-xnu/blob/main/bsd/sys/resource.h
+* kern_resource.c
+    https://github.com/apple/darwin-xnu/blob/main/bsd/kern/kern_resource.c
+
 For documentation on `setrlimit` and how to limit resources for MAC
 ** `setrlimit` **
-https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/setrlimit.2.html
+* https://github.com/apple/darwin-xnu/blob/main/bsd/man/man2/getrlimit.2
 
 For documentation on MAC specific signal alarms:
 ** `signals` **
 https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/sigaction.2.html
+
+Can't seem to limit memory, the only accepted rlimit towards memory is RLIMIT_DATA and
+that seems to not work.
+# https://github.com/apple/darwin-xnu/blob/2ff845c2e033bd0ff64b5b6aa6063a1f8f65aa32/bsd/kern/kern_resource.c#L987
 
 This module and the Linux limiter share almost identical code but we keep them seperate
 incase of specific modules or changes needed
@@ -13,6 +27,7 @@ incase of specific modules or changes needed
 from __future__ import annotations
 
 import resource
+import signal
 
 from pynisher.limiters.limiter import Limiter
 
@@ -64,4 +79,5 @@ class LimiterMac(Limiter):
             has elapsed.
         """
         limit = (cpu_time, cpu_time + 2)
+        signal.signal(signal.SIGXCPU, signal.SIG_DFL)
         resource.setrlimit(resource.RLIMIT_CPU, limit)
