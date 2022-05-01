@@ -118,7 +118,7 @@ jobs:
     - name: Install pywin32 for conda
       if: runner.os == 'Windows'
       run: |
-        python -m pip uninstall pywin32
+        python -m pip uninstall pywin32 -y
         conda install pywin32
 
     - name: Tests
