@@ -54,13 +54,14 @@ def pynish_walltime(context: str) -> float:
 def pynish_cputime(context: str) -> float:
     """Will pynish a function and exceed cputime"""
     lf = limit(cputime_sleep, cpu_time=(1, "s"), context=context)
-    return lf(5)
+    x = lf(5)
+    return x
 
 
 @pytest.mark.parametrize(
     # Gracious limits
     "top_limit",
-    [{"wall_time": 10, "cpu_time": 10, "memory": (200, "MB")}],
+    [{"wall_time": 20, "cpu_time": 20, "memory": (200, "MB")}],
 )
 @pytest.mark.parametrize(
     "func, err",
@@ -95,10 +96,10 @@ def test_two_level_fail_second_level(
             "'forkserver' to spawn new processes."
         )
 
-    if root_context == "spawn" and sub_context == "fork" and sys.version_info < (3, 8):
+    if root_context == "fork" and sub_context == "spawn" and sys.version_info < (3, 8):
         pytest.skip(
-            "Python 3.7 doesn't seem to allow for a 'spawn' process function"
-            " to create new subprocesses with 'fork'"
+            "Python 3.7 doesn't seem to allow for a 'fork' process function"
+            " to create new subprocesses with 'spawn'"
         )
 
     lf = limit(func, **top_limit, context=root_context)
@@ -133,10 +134,10 @@ def test_two_level_success_result(root_context: str, sub_context: str) -> None:
             "'forkserver' to spawn new processes."
         )
 
-    if root_context == "spawn" and sub_context == "fork" and sys.version_info < (3, 8):
+    if root_context == "fork" and sub_context == "spawn" and sys.version_info < (3, 8):
         pytest.skip(
-            "Python 3.7 doesn't seem to allow for a 'spawn' process function"
-            " to create new subprocesses with 'fork'"
+            "Python 3.7 doesn't seem to allow for a 'fork' process function"
+            " to create new subprocesses with 'spawn'"
         )
 
     lf = limit(pynish_success, context=root_context)

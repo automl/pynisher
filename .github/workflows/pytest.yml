@@ -69,6 +69,7 @@ jobs:
         echo "::set-output name=BEFORE::$(git status --porcelain -b)"
 
     - name: Tests
+      timeout-minutes: 10
       run: |
         pytest ${{ env.pytest-extra-args }} ${{ env.test-dir }}
 
@@ -115,6 +116,7 @@ jobs:
         python -m pip install -e ".${{ env.extra-requires }}"
 
     - name: Tests
+      timeout-minutes: 10
       run: |
           pytest ${{ env.pytest-extra-args }} ${{ env.test-dir }}
 
@@ -154,5 +156,6 @@ jobs:
         python -m pip install ${{ env.sdist_name }}${{ env.extra-requires }}
 
     - name: Tests
+      timeout-minutes: 10
       run: |
         python -m pytest ${{ env.pytest-extra-args }} ${{ env.test-dir }}

@@ -64,13 +64,13 @@ def test_terminate_child_processes_removes_all_children(
         )
 
     if (
-        pynisher_context == "spawn"
-        and child_context == "fork"
+        pynisher_context == "fork"
+        and child_context == "spawn"
         and sys.version_info < (3, 8)
     ):
         pytest.skip(
-            "Python 3.7 doesn't seem to allow for a 'spawn' process function"
-            " to create new subprocesses with 'fork'"
+            "Python 3.7 doesn't seem to allow for a 'fork' process function"
+            " to create new subprocesses with 'spawn'"
         )
 
     lf = limit(
@@ -119,13 +119,13 @@ def test_terminate_child_processes_false_keeps_children(
         )
 
     if (
-        pynisher_context == "spawn"
-        and child_context == "fork"
+        pynisher_context == "fork"
+        and child_context == "spawn"
         and sys.version_info < (3, 8)
     ):
         pytest.skip(
-            "Python 3.7 doesn't seem to allow for a 'spawn' process function"
-            " to create new subprocesses with 'fork'"
+            "Python 3.7 doesn't seem to allow for a 'fork' process function"
+            " to create new subprocesses with 'spawn'"
         )
 
     if daemon is False:

@@ -445,7 +445,7 @@ class Pynisher(Generic[P, T]):
         # Memory reasons to kill process on windows
         if (
             sys.platform.lower().startswith("win")
-            and self.cpu_time is not None
+            and self.memory is not None
             and exitcode in WIN_MEMORY_EXITCODES
         ):
             # We can't be certain it was caused by a cputimeout but the exist status

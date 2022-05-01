@@ -60,13 +60,15 @@ def test_import_fail_windows() -> None:
     There's no automatic way to identfiy this from a regular OSError so we better
     be explicit about it.
     """
-    with pytest.raises(MemoryLimitException):
+    with pytest.raises(MemoryLimitException) as e:
         with limit(
             import_sklearn,
             memory=(100, "mb"),
             wrap_errors={"memory": [(OSError, 22, 1455)]},
         ) as lf:
             lf()
+
+    print(e, type(e))
 
 
 @pytest.mark.skipif(not plat.startswith("darwin"), reason="darwin specific")
@@ -88,9 +90,11 @@ def test_import_fail_all() -> None:
     * Should fail to import but give a PynisherException as we can't properly
       identify that it's root cause is due to memory
     """
-    with pytest.raises(PynisherException):
+    with pytest.raises(PynisherException) as e:
         with limit(import_sklearn, wrap_errors=True, memory=(100, "mb")) as lf:
             lf()
+
+    print(e, type(e))
 
 
 def test_import_with_enough_memory() -> None:
