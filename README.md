@@ -25,7 +25,7 @@ from pynisher import limit, MemoryLimitException, WallTimeoutException
 
 def train_memory_hungry_model(X, y) -> Model:
     # ... do some thing
-    return Model
+    return model
 
 model_trainer = limit(
     train_memory_hungry_model,
@@ -87,6 +87,36 @@ try:
     limited_f()
 except ValueError as e:
     ... # do what you need
+```
+
+If returning very large items, prefer to save them to file first and then read the result as
+sending large objects through pipes can be very slow.
+
+```python
+from pathlib import Path
+import pickle
+
+from pynisher import limit
+
+def train_gpt3(save_path: Path) -> bool:
+    gpt3 = ...
+    gpt3.train()
+    with save_path.open('wb') as f:
+        pickle.dump(gpt3, f)
+
+    return True
+
+path = Path('gpt3.model')
+trainer = limit(train_gpt3, memory=(1_000_000, "gb")):
+
+try:
+    trainer(save_path=path)
+
+    with path.open("rb") as f:
+        gpt3 = pickle.load(f)
+
+except MemoryLimitException as e:
+    ...
 ```
 
 
