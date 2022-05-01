@@ -28,7 +28,7 @@ env:
 
   # Arguments used for pytest, appended to the ones in pyproject.yaml
   pytest-extra-args: >-
-    -vrs
+    -v -s
 
 jobs:
 
