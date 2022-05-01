@@ -26,9 +26,9 @@ env:
   test-dir: test
   extra-requires: "[test]"  # "" for no extra_requires
 
-  # Arguments used for pytest, appended to the ones in pyproject.yaml
-  pytest-extra-args: >-
-    -v -s
+  # Arguments used for pytest
+  pytest-args: >-
+    -v -ra
 
 jobs:
 
@@ -69,9 +69,8 @@ jobs:
         echo "::set-output name=BEFORE::$(git status --porcelain -b)"
 
     - name: Tests
-      timeout-minutes: 10
       run: |
-        pytest ${{ env.pytest-extra-args }} ${{ env.test-dir }}
+        pytest ${{ env.pytest-args }} ${{ env.test-dir }}
 
     - name: Check for files left behind by test
       run: |
@@ -122,9 +121,8 @@ jobs:
         conda install pywin32
 
     - name: Tests
-      timeout-minutes: 10
       run: |
-          pytest ${{ env.pytest-extra-args }} ${{ env.test-dir }}
+          pytest ${{ env.pytest-args }} ${{ env.test-dir }}
 
   # Testing a dist install
   dist-test:
@@ -162,6 +160,5 @@ jobs:
         python -m pip install ${{ env.sdist_name }}${{ env.extra-requires }}
 
     - name: Tests
-      timeout-minutes: 10
       run: |
-        python -m pytest ${{ env.pytest-extra-args }} ${{ env.test-dir }}
+        python -m pytest ${{ env.pytest-args }} ${{ env.test-dir }}
