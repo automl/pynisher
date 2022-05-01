@@ -55,6 +55,7 @@ class Pynisher(Generic[P, T]):
         warnings: bool = ...,
         wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
         terminate_child_processes: bool = ...,
+        forceful_keyboard_interupt: bool = ...,
     ) -> None:
         ...
 
@@ -74,6 +75,7 @@ class Pynisher(Generic[P, T]):
         warnings: bool = ...,
         wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
         terminate_child_processes: bool = ...,
+        forceful_keyboard_interupt: bool = ...,
     ) -> None:
         ...
 
@@ -90,6 +92,7 @@ class Pynisher(Generic[P, T]):
         warnings: bool = True,
         wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
         terminate_child_processes: bool = True,
+        forceful_keyboard_interupt: bool = True,
     ) -> None:
         """
         Parameters
@@ -190,6 +193,11 @@ class Pynisher(Generic[P, T]):
 
         terminate_child_processes: bool = True
             Whether to clean up all child processes upon completion
+
+        forceful_keyboard_interupt: bool = True
+            Whether keyboard interupts should forceably kill any subprocess or the
+            pynished function. If True, it will temrinate the process tree of
+            the pynished function and then reraise the KeyboardInterrupt.
         """  # noqa
         _cpu_time: int | None
         if isinstance(cpu_time, tuple):
@@ -246,6 +254,7 @@ class Pynisher(Generic[P, T]):
         self.warnings = warnings
         self.wrap_errors = wrap_errors
         self.terminate_child_processes = terminate_child_processes
+        self.forceful_keyboard_interupt = forceful_keyboard_interupt
 
         # Set once the function is running
         self._process: psutil.Process | None = None
@@ -340,9 +349,25 @@ class Pynisher(Generic[P, T]):
             # Likely only to occur when subprocess already finished
             pass
 
-        # If self.wall time is None, block until the subprocess finishes or terminates
-        # Otherwise, will return after wall_time and the process will still be running
-        subprocess.join(self.wall_time)
+        # If self.wall time is None, block until the subprocess finishes or
+        # terminates. Otherwise, will return after wall_time and the process
+        # will still be running
+        if not self.forceful_keyboard_interupt:
+            subprocess.join(self.wall_time)
+        else:
+            # The keyboard interupt will be send to all processes simultaneuously
+            # and handled by each of them. The default behaviour is to terminate
+            # but this can be caught by a subprocess and ignored. To circumvent
+            # this, we convert this keyboard interupt into a SIGTERM and propgate it
+            try:
+                subprocess.join(self.wall_time)
+            except KeyboardInterrupt:
+                terminate_process(
+                    subprocess.pid,
+                    children=self.terminate_child_processes,
+                    parent=True,
+                )
+                raise KeyboardInterrupt
 
         # exitcode here can only take on 3 values
         #
@@ -544,6 +569,7 @@ def restricted(
     warnings: bool = ...,
     wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
     terminate_child_processes: bool = ...,
+    forceful_keyboard_interupt: bool = True,
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
     ...
 
@@ -560,6 +586,7 @@ def restricted(
     warnings: bool = ...,
     wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
     terminate_child_processes: bool = ...,
+    forceful_keyboard_interupt: bool = True,
 ) -> Callable[[Callable[P, T]], Callable[P, T | _EMPTY]]:
     ...
 
@@ -592,6 +619,7 @@ def restricted(
     warnings: bool = True,
     wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
     terminate_child_processes: bool = True,
+    forceful_keyboard_interupt: bool = True,
 ) -> Callable[[Callable[P, T]], Callable[P, T | _EMPTY]]:
     """Limit a function's resource consumption on each call
 
@@ -650,6 +678,11 @@ def restricted(
 
     terminate_child_processes: bool = True
         Whether to clean up all child processes upon completion
+
+    forceful_keyboard_interupt: bool = True
+        Whether keyboard interupts should forceably kill any subprocess or the
+        pynished function. If True, it will temrinate the process tree of
+        the pynished function and then reraise the KeyboardInterrupt.
     """  # noqa
     if not supports("decorator") or context == "spawn":
         raise ValueError(

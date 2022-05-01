@@ -106,7 +106,7 @@ def test_two_level_fail_second_level(
 
     try:
         lf(context=sub_context)
-    except CpuTimeoutException:
+    except err:
         pass
     except Exception as e:
         print(e, type(e))
