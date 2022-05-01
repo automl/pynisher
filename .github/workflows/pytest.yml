@@ -115,6 +115,12 @@ jobs:
         python -m pip install wheel
         python -m pip install -e ".${{ env.extra-requires }}"
 
+    - name: Install pywin32 for conda
+      if: runner.os == "Windows"
+      run: |
+        python -m pip uninstall pywin32
+        conda install pywin32
+
     - name: Tests
       timeout-minutes: 10
       run: |
