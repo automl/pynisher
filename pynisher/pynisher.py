@@ -351,6 +351,7 @@ class Pynisher(Generic[P, T]):
         # * != 0        | Process was terminated non-gracefully, nothing in the pipe
         #               | and it may not be closed
         exitcode = subprocess.exitcode
+        print("exitcode", exitcode)
 
         terminate_process(
             subprocess.pid,
@@ -506,6 +507,8 @@ class Pynisher(Generic[P, T]):
         if not self.raises:
             return EMPTY
 
+        print("err", err)
+        print("tb", tb)
         if tb is not None:
             # Just so we can insert the traceback
             raise err from err.__class__(tb)

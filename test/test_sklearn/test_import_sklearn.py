@@ -66,6 +66,7 @@ def test_import_fail_windows() -> None:
     There's no automatic way to identfiy this from a regular OSError so we better
     be explicit about it.
     """
+    m = Monitor()
     print("Before job ", m.memory("mb"))
     with pytest.raises(MemoryLimitException) as e:
         with limit(
