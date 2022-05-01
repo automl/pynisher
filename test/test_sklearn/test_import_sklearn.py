@@ -68,15 +68,18 @@ def test_import_fail_windows() -> None:
     """
     m = Monitor()
     print("Before job ", m.memory("mb"))
-    with pytest.raises(MemoryLimitException) as e:
+    try:
         with limit(
             import_sklearn,
             memory=(100, "mb"),
             wrap_errors={"memory": [(OSError, 22, 1455)]},
         ) as lf:
             lf()
-
-    print(e, type(e))
+    except MemoryLimitException:
+        pass
+    except Exception as e:
+        print(e, type(e))
+        raise e
 
 
 @pytest.mark.skipif(not plat.startswith("darwin"), reason="darwin specific")
@@ -100,11 +103,16 @@ def test_import_fail_all() -> None:
     """
     m = Monitor()
     print("Before job ", m.memory("mb"))
-    with pytest.raises(PynisherException) as e:
+    try:
         with limit(import_sklearn, wrap_errors=True, memory=(100, "mb")) as lf:
             lf()
-
-    print(e, type(e))
+    except MemoryLimitException as e:
+        raise e
+    except PynisherException:
+        pass
+    except Exception as e:
+        print(e, type(e))
+        raise e
 
 
 def test_import_with_enough_memory() -> None:
