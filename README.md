@@ -233,10 +233,10 @@ wrap_errors: bool | list[Exception] | dict = False
 # and set `terminate_child_processes` to `False`
 terminate_child_processes: bool = True
 
-# Whether keyboard interupts should forceably kill any subprocess or the
+# Whether keyboard interrupts should forceably kill any subprocess or the
 # pynished function. If True, it will temrinate the process tree of
 # the pynished function and then reraise the KeyboardInterrupt.
-forceful_keyboard_interupt: bool = True
+forceful_keyboard_interrupt: bool = True
 ```
 
 #### Exceptions
