@@ -196,7 +196,7 @@ class Limiter(ABC):
 
         # NOTE: Imports inside if statements
         #
-        #   This servers two purposes, one is to prevent cyclical imports, as they need
+        #   This serves two purposes, one is to prevent cyclical imports, as they need
         #   to inherit Limiter from this file, while this file needs to import them too,
         #   creating a circular dependancy... unless they're imported later.
         #
