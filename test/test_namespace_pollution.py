@@ -34,3 +34,19 @@ def test_not_in_namespace(context: str, wrap_errors: Any) -> None:
             pass
 
     assert "sklearn" not in sys.modules.keys()
+
+
+@pytest.mark.parametrize("context", contexts)
+def test_namespace_polluted_if_not_wrapped(context: str) -> None:
+    """
+    Expects
+    -------
+    * If not wrapping errors then the exception returned can pollute the
+      namespace of the master process
+    """
+    with limit(import_sklearn, context=context) as lf:
+
+        try:
+            lf()
+        except Exception:
+            assert "sklearn" in sys.modules.keys()
