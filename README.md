@@ -222,6 +222,8 @@ warnings: bool = True
 #
 # * wrap_errors={ "memory": [ImportError, (OSError, 22)], "pynisher": [ValueError] }
 #
+# We check that the exception is explicitly of the same type and not just a subclass.
+# This is to prevent accidentally wrapping to eagerly.
 wrap_errors: bool | list[Exception] | dict = False
 
 

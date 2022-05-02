@@ -24,7 +24,10 @@ def is_err(err: Exception, err_type: str | Type[Exception]) -> bool:
     # Check name of class matches
     a = isinstance(err_type, str) and type(err).__name__ == err_type
 
-    # Explictly check for just class, not subclass
+    # Explicitly check for just class, not subclass
+    # We do this because many library specific errors may inherit from base errors
+    # and we don't want to accidentally wrap to many errors.
+    # i.e. sklearn.exceptions.NotFittedError inherits form ValueError
     b = isinstance(err_type, type) and type(err) == err_type
 
     return a or b
