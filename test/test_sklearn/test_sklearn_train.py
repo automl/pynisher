@@ -1,6 +1,6 @@
 """
 Tracking:
-* When failinga to import with a low memory limit, an import error is raised
+* When failing to import with a low memory limit, an import error is raised
 """
 from __future__ import annotations
 
