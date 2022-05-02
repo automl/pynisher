@@ -20,8 +20,9 @@ def test_large_return_value(context: str) -> None:
     larger than 32 MiB may result in a ValueError exception, depending
     on OS.
 
-    # Turns out this doesn't cause an issue but is extremely slow to send this
-    information through a pipe. We should document this
+    Turns out this doesn't cause an issue but is extremely slow to send this
+    information through a pipe. This is documented in the readme but the test left in
+    case of future need.
     """
     pytest.skip(
         "This doesn't seem to raise errors on Linux but is extremely slow. Instead"
