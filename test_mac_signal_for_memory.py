@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import resource
 import signal
+import time
 
 from pynisher import limit
 from pynisher.util import memconvert
@@ -14,7 +15,7 @@ def usememory(x: int | tuple[int, str]) -> int:
         x = round(memconvert(amount, frm=unit))
 
     bytearray(int(x))
-    time.sleep()
+    time.sleep(10)
     return x
 
 
