@@ -488,7 +488,9 @@ class Pynisher(Generic[P, T]):
         if exitcode == -signal.SIGSEGV and self.memory is not None:
             err = MemoryLimitException(
                 "The function exited with a segmentation error (SIGSEGV) and a memory"
-                " limit was set. We presume this is due to the memory limit set."
+                " limit was set. We presume this is due to the memory limit. This may"
+                " not be the case but is quite likely if your function works without a"
+                " memory constraint."
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
             return self._handle_return(err=err)
