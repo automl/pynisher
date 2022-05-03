@@ -26,35 +26,12 @@ incase of specific modules or changes needed
 """
 from __future__ import annotations
 
-from typing import Any
-
 import resource
-import signal
 
-from pynisher.exceptions import CpuTimeoutException
 from pynisher.limiters.limiter import Limiter
-from pynisher.util import terminate_process
 
 
 class LimiterMac(Limiter):
-    @staticmethod
-    def _sigxcpu_handler(signum: int, frame: Any | None) -> None:
-        # SIGPROF: cpu_time `setitimer(ITIMER_PRF)`
-        #
-        #   This signal is raised when `setitimer(time)` elapses.
-        #   It measures the sys + user time used while the process is executing
-        #   * https://docs.python.org/3/library/signal.html#signal.setitimer
-        if signum == signal.SIGXCPU:
-            terminate_process(parent=False)
-            raise CpuTimeoutException()
-
-        # UNKNOWN
-        #
-        #   We have caught some unknown signal. This means we are too restrictive
-        #   with the signals we are catching.
-        else:
-            raise NotImplementedError(f"Does not handle signal with id {signum}")
-
     def limit_memory(self, memory: int) -> None:
         """Limit the addressable memory
 
@@ -100,6 +77,5 @@ class LimiterMac(Limiter):
             How often the itimer should ping the process once the time
             has elapsed.
         """
-        limit = (cpu_time, cpu_time + 2)
-        signal.signal(signal.SIGXCPU, LimiterMac._sigxcpu_handler)
+        limit = (cpu_time, cpu_time + 5 * interval)
         resource.setrlimit(resource.RLIMIT_CPU, limit)

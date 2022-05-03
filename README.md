@@ -147,7 +147,7 @@ Currently we mainly support Linux with partial support for Mac and Windows:
 | --      | -----------        | ----------              | --------                | -------------      |
 | Linux   | :heavy_check_mark: | :heavy_check_mark:      | :heavy_check_mark:      | :heavy_check_mark: |
 | Windows | :heavy_check_mark: | :heavy_check_mark: (1.) | :heavy_check_mark: (1.) | :x:  (3.)          |
-| Mac     | :heavy_check_mark: | :heavy_check_mark:      | :x: (2.)                | :x:  (3.)          |
+| Mac     | :heavy_check_mark: | :heavy_check_mark: (4.) | :x: (2.)                | :x:  (3.)          |
 
 1. Limiting memory and cputime on Windows is done with the library `pywin32`. There seem
 to be installation issues when instead of using `conda install <x>`, you use `pip install <x>`
@@ -168,6 +168,10 @@ not work for your Mac/Windows. Please use the `limit` method of limiting resourc
 (Technically this is supported for Mac Python 3.7 though). This is likely due to the default
 `spawn` context for Windows and Mac but using other available methods on Mac also seems to not work.
 For Linux, the `fork` and `forkserver` context seems to work.
+
+4. For unknown reasons, using `time.process_time()` to query the cpu usage within a pynished function
+will cause the `cpu_time` limits to be ignored on Mac, leading to a function that will hang indefinitly
+unless using some other limit.
 
 
 #### Parameters

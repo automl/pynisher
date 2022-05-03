@@ -34,16 +34,15 @@ def walltime_sleep(sleep: float) -> float:
 
 
 def cputime_sleep(sleep: float) -> tuple[float, int]:
-    """Keeps cpu busy for `sleep` seconds"""
-    start = time.process_time()
+    """Keeps cpu busy for `sleep` seconds
+
+    NOTE: Using time.process_time() at all causes MAC to hang indefinitely?
+    """
     x = 0
     while True:
         x = x + 1
-        duration = time.process_time() - start
-        if duration > sleep:
-            break
 
-    return (duration, x)
+    return (sleep, x)
 
 
 def usememory(x: int | tuple[int, str]) -> int:
