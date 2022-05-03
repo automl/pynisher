@@ -3,8 +3,8 @@ import time
 
 sleep = 10
 
-start = time.process_time()
+start = time.perf_counter()
 while True:
-    duration = time.process_time() - start
+    duration = time.perf_counter() - start
     if duration > sleep:
         break

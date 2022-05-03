@@ -168,8 +168,5 @@ if __name__ == "__main__":
     model = SVR()
     print("After model and data", m.memory("mb"))
 
-    start = time.process_time()
     model.fit(X, y)
-    end = time.process_time()
     print("After fit", m.memory("mb"))
-    print("Fitting duration in cputime ", end - start)
