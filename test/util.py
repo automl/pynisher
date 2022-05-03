@@ -37,10 +37,15 @@ def cputime_sleep(sleep: float) -> tuple[float, int]:
     """Keeps cpu busy for `sleep` seconds
 
     NOTE: Using time.process_time() at all causes MAC to hang indefinitely?
+    don't use in `test_fail`
     """
     x = 0
+    start = time.process_time()
     while True:
         x = x + 1
+        duration = time.process_time() - start
+        if duration > sleep:
+            break
 
     return (sleep, x)
 

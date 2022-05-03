@@ -26,9 +26,15 @@ def test_success(context: str) -> None:
         print(rf(2))
 
 
-@pytest.mark.parametrize("cpu_time", [2, 3])
+def run_forever() -> None:
+    """A function that consumes cpu and runs indefinitely"""
+    x = 0
+    while True:
+        x = x + 1
+
+
 @pytest.mark.parametrize("context", contexts)
-def test_fail(cpu_time: int, context: str) -> None:
+def test_fail(context: str) -> None:
     """
     Expects
     -------
@@ -38,9 +44,8 @@ def test_fail(cpu_time: int, context: str) -> None:
     with pytest.raises(CpuTimeoutException):
 
         with Pynisher(
-            cputime_sleep,
-            cpu_time=cpu_time,
+            run_forever,
+            cpu_time=2,
             context=context,
         ) as rf:
-            over_limit = cpu_time * 3
-            print(rf(over_limit))
+            rf()
