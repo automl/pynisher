@@ -14,7 +14,7 @@ from pynisher import (
 
 import pytest
 
-from test.util import cputime_sleep, raises_error, usememory, walltime_sleep
+from test.util import busy_wait, raises_error, usememory, walltime_sleep
 
 
 class CustomException(Exception):
@@ -53,9 +53,9 @@ def pynish_walltime(context: str) -> float:
 
 def pynish_cputime(context: str) -> float:
     """Will pynish a function and exceed cputime"""
-    lf = limit(cputime_sleep, cpu_time=(1, "s"), context=context)
-    x = lf(5)
-    return x
+    lf = limit(busy_wait, cpu_time=(1, "s"), context=context)
+    lf(10)
+    return 13.37
 
 
 @pytest.mark.parametrize(

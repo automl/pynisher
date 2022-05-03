@@ -13,7 +13,7 @@ from pynisher import (
 
 import pytest
 
-from test.util import cputime_sleep, usememory
+from test.util import busy_wait, usememory
 
 if not supports("memory") or not supports("cpu_time"):
     pytest.skip("Tests specifically for cputime and memory", allow_module_level=True)
@@ -27,19 +27,19 @@ def test_cputime_limit(context: str) -> None:
     * With a cputime limit set and a memory limit set, spending too long computing
       should raise a cpu time limit
     """
-    mem_limit = (100, "MB")
+    mem_limit = (500, "MB")
     cputime_limit = 2
 
     busy = 10
 
     with pytest.raises(CpuTimeoutException):
         with Pynisher(
-            cputime_sleep,
+            busy_wait,
             memory=mem_limit,
             cpu_time=cputime_limit,
             context=context,
         ) as rf:
-            print(rf(busy))
+            rf(busy)
 
 
 @pytest.mark.parametrize("context", contexts)

@@ -169,9 +169,10 @@ not work for your Mac/Windows. Please use the `limit` method of limiting resourc
 `spawn` context for Windows and Mac but using other available methods on Mac also seems to not work.
 For Linux, the `fork` and `forkserver` context seems to work.
 
-4. For unknown reasons, using `time.process_time()` to query the cpu usage within a pynished function
+4. For unknown reasons, using `time.process_time()` to query the cpu time usage within a pynished function
 will cause the `cpu_time` limits to be ignored on Mac, leading to a function that will hang indefinitly
-unless using some other limit.
+unless using some other limit. Please let us know if this is some known issue or any workarounds are
+available.
 
 
 #### Parameters

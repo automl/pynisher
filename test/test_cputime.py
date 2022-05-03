@@ -6,7 +6,7 @@ from pynisher import CpuTimeoutException, Pynisher, contexts, supports_cputime
 
 import pytest
 
-from test.util import cputime_sleep
+from test.util import busy_wait
 
 if not supports_cputime():
     pytest.skip(
@@ -22,15 +22,8 @@ def test_success(context: str) -> None:
     -------
     * Should raise no error and execute te function
     """
-    with Pynisher(cputime_sleep, cpu_time=3, context=context) as rf:
-        print(rf(2))
-
-
-def run_forever() -> None:
-    """A function that consumes cpu and runs indefinitely"""
-    x = 0
-    while True:
-        x = x + 1
+    with Pynisher(busy_wait, cpu_time=4, context=context) as rf:
+        print(rf(1))
 
 
 @pytest.mark.parametrize("context", contexts)
@@ -43,9 +36,5 @@ def test_fail(context: str) -> None:
     """
     with pytest.raises(CpuTimeoutException):
 
-        with Pynisher(
-            run_forever,
-            cpu_time=2,
-            context=context,
-        ) as rf:
-            rf()
+        with Pynisher(busy_wait, cpu_time=2, context=context) as rf:
+            rf(20)

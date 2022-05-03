@@ -5,13 +5,7 @@ from pynisher import EMPTY, Pynisher, contexts, limit, supports
 
 import pytest
 
-from test.util import (
-    cputime_sleep,
-    get_process_id,
-    raises_error,
-    return_none,
-    usememory,
-)
+from test.util import busy_wait, get_process_id, raises_error, return_none, usememory
 
 
 @pytest.mark.parametrize("context", contexts)
@@ -157,7 +151,7 @@ def test_cputime_no_raise_gets_empty(context: str) -> None:
     -------
     * No raise should return empty if there was a cputime out
     """
-    rf = Pynisher(cputime_sleep, cpu_time=1, raises=False, context=context)
+    rf = Pynisher(busy_wait, cpu_time=1, raises=False, context=context)
     result = rf(10000)
     assert result is EMPTY
 
