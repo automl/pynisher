@@ -4,7 +4,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Type
 
+import os
 import platform
+import signal
 import sys
 import traceback
 from multiprocessing.connection import Connection
@@ -159,10 +161,22 @@ class Limiter(ABC):
         last_response_attempt = None
         try:
             self.output.send(last_response_attempt)
-        finally:
             self.output.close()
             if self.terminate_child_processes is True:
                 terminate_process(timeout=2, children=True, parent=False)
+            return
+        except Exception:
+            pass
+
+        # Look, everything failed, try kill any child processes and just kill this
+        # process is we can't for memory reasons
+        self.output.close()
+        try:
+            if self.terminate_child_processes is True:
+                terminate_process(timeout=2, children=True, parent=False)
+        except MemoryError:
+            os.kill(os.getpid(), signal.SIGSEGV)
+        finally:
             return
 
     @staticmethod
