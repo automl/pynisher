@@ -376,7 +376,6 @@ class Pynisher(Generic[P, T]):
         # * != 0        | Process was terminated non-gracefully, nothing in the pipe
         #               | and it may not be closed
         exitcode = subprocess.exitcode
-        print("exitcode", exitcode)
 
         terminate_process(
             subprocess.pid,
@@ -509,8 +508,8 @@ class Pynisher(Generic[P, T]):
 
         # We didn't get a result and the pipe closed in some way we weren't expecting
         err = PynisherException(
-            f"Unknown reason for exitcode {exitcode} and killed process"
-            f"\n{callstring(self.func, *args, **kwargs)}"
+            f"Unknown reason for exitcode {exitcode}, no result or error recieved and "
+            f" killed process \n{callstring(self.func, *args, **kwargs)}"
         )
         return self._handle_return(err=err)
 
@@ -534,8 +533,6 @@ class Pynisher(Generic[P, T]):
         if not self.raises:
             return EMPTY
 
-        print("err", err)
-        print("tb", tb)
         if tb is not None:
             # Just so we can insert the traceback
             raise err from err.__class__(tb)
