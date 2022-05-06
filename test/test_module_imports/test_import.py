@@ -4,6 +4,7 @@ from pynisher import (
     WallTimeoutException,
     contexts,
     limit,
+    supports,
 )
 
 import pytest
@@ -30,6 +31,7 @@ def import_slow_walltime_module() -> bool:
     return True
 
 
+@pytest.mark.skipif(not supports("memory"), reason="System doesn't support memory")
 @pytest.mark.parametrize("context", contexts)
 def test_import_large_module(context: str) -> None:
     """
