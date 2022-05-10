@@ -1,9 +1,17 @@
+import platform
 from pathlib import Path
 
-from pynisher import MemoryLimitException, contexts, limit
+from pynisher import MemoryLimitException, contexts, limit, supports
 from pynisher.util import memconvert
 
 import pytest
+
+
+if not supports("memory"):
+    pytest.skip(
+        f"Doesn't support limiting memory on {platform.platform()} ",
+        allow_module_level=True,
+    )
 
 
 def read_file(path: Path) -> bytes:

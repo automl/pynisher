@@ -49,12 +49,15 @@ class LimiterMac(Limiter):
         """
         # This will likely do nothing on newer mac, however users can check for support
         # before hand to prevent issues.
-        soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+        try:
+            soft, hard = resource.getrlimit(resource.RLIMIT_AS)
 
-        self.old_limits = (soft, hard)
-        new_limits = (memory, hard)
+            self.old_limits = (soft, hard)
+            new_limits = (memory, hard)
 
-        resource.setrlimit(resource.RLIMIT_AS, new_limits)
+            resource.setrlimit(resource.RLIMIT_AS, new_limits)
+        except Exception:
+            raise RuntimeError("Limiting memory is not supported on your platform.")
 
     def limit_cpu_time(self, cpu_time: int, interval: int = 1) -> None:
         """Limit the cpu time for this process.

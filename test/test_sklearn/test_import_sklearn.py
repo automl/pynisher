@@ -6,7 +6,7 @@ individual errors types can be raised as a MemoryLimitException.
 import os
 import sys
 
-from pynisher import MemoryLimitException, PynisherException, limit
+from pynisher import MemoryLimitException, PynisherException, limit, supports
 from pynisher.util import Monitor
 
 import pytest
@@ -82,6 +82,7 @@ def test_import_fail_windows() -> None:
         raise e
 
 
+@pytest.mark.skipif(not supports("memory"), reason="System doesn't support memory")
 @pytest.mark.skipif(not plat.startswith("darwin"), reason="darwin specific")
 def test_import_fail_mac() -> None:
     """
@@ -115,6 +116,7 @@ def test_import_fail_all() -> None:
         raise e
 
 
+@pytest.mark.skipif(not supports("memory"), reason="System doesn't support memory")
 def test_import_with_enough_memory() -> None:
     """
     Expects

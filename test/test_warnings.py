@@ -1,12 +1,23 @@
+import platform
 import sys
 from contextlib import redirect_stderr
 from pathlib import Path
 
-from pynisher import Pynisher, contexts
+from pynisher import Pynisher, contexts, supports
 
 import pytest
 
 plat = sys.platform
+
+
+# We skip the test for mac because it raises a RuntimeError before the warnings are
+# recognized.
+if not supports("memory"):
+    pytest.skip(
+        f"Doesn't support limiting memory on {platform.platform()} ",
+        allow_module_level=True,
+    )
+
 
 if "fork" not in contexts:
     pytest.skip("Only seems to capture with with fork process", allow_module_level=True)
