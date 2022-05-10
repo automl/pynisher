@@ -6,7 +6,6 @@ from pynisher.util import memconvert
 
 import pytest
 
-
 if not supports("memory"):
     pytest.skip(
         f"Doesn't support limiting memory on {platform.platform()} ",
