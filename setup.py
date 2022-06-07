@@ -30,7 +30,6 @@ setup(
             "mypy",
             "scikit-learn",
         ],
-        "docs": "sphinx",
     },
     author=(
         "Stefan Falkner, Christina Hernandez-Wunsch, Samuel Mueller,"

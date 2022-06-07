@@ -4,7 +4,7 @@
 # These have been configured to only really run short tasks. Longer form tasks
 # are usually completed in github actions.
 
-.PHONY: help install-dev check format pre-commit clean clean-doc clean-build build doc links publish test
+.PHONY: help install-dev check format pre-commit clean clean-build build links publish test
 
 help:
 	@echo "Makefile pynisher"
@@ -12,10 +12,8 @@ help:
 	@echo "* check            to check the source code for issues"
 	@echo "* format           to format the code with black and isort"
 	@echo "* pre-commit       to run the pre-commit check"
-	@echo "* clean            to clean the dist and doc build files"
+	@echo "* clean            to clean the dist
 	@echo "* build            to build a dist"
-	@echo "* doc              to generate and view the html files"
-	@echo "* linkcheck        to check the documentation links"
 	@echo "* publish          to help publish the current branch to pypi"
 	@echo "* test             to run the tests"
 
@@ -34,11 +32,10 @@ FLAKE8 ?= flake8
 
 DIR := "${CURDIR}"
 DIST := "${CURDIR}/dist""
-DOCDIR := "${DIR}/doc"
 INDEX_HTML := "file://${DOCDIR}/build/html/index.html"
 
 install-dev:
-	$(PIP) install -e ".[test,docs]"
+	$(PIP) install -e ".[test]"
 	pre-commit install
 
 check-black:
@@ -58,7 +55,7 @@ check-flake8:
 	$(FLAKE8) test || :
 
 # pydocstyle does not have easy ignore rules, instead, we include as they are covered
-check: check-black check-isort check-mypy check-flake8 # check-pydocstyle
+check: check-black check-isort check-mypy check-flake8 check-pydocstyle
 
 pre-commit:
 	$(PRECOMMIT) run --all-files
@@ -74,25 +71,16 @@ format-isort:
 
 format: format-black format-isort
 
-clean-doc:
-	$(MAKE) -C ${DOCDIR} clean
-
 clean-build:
 	$(PYTHON) setup.py clean
 	rm -rf ${DIST}
 
-# Clean up any builds in ./dist as well as doc
-clean: clean-doc clean-build
+# Clean up any builds in ./dist
+clean: clean-build
 
 # Build a distribution in ./dist
 build:
 	$(PYTHON) setup.py sdist
-
-doc:
-	@echo "TODO"
-
-links:
-	$(MAKE) -C ${DOCDIR} linkcheck
 
 examples:
 	@echo "TODO"
