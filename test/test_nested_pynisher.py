@@ -62,10 +62,10 @@ def pynish_cputime(context: str) -> float:
 @pytest.mark.parametrize(
     # Gracious limits
     "top_limit",
-    [{"wall_time": 20, "cpu_time": 20, "memory": (200, "MB")}],
+    [{"wall_time": 20, "cpu_time": 20, "memory": (500, "MB")}],
 )
 @pytest.mark.parametrize(
-    "func, err",
+    "func, err_type",
     [
         (pynish_memory, MemoryLimitException),
         (pynish_walltime, WallTimeoutException),
