@@ -37,7 +37,7 @@ class LimiterLinux(Limiter):
 
         resource.setrlimit(resource.RLIMIT_AS, new_limits)
 
-    def limit_cpu_time(self, cpu_time: int, interval: int = 1) -> None:
+    def limit_cpu_time(self, cpu_time: int, interval: int = 5) -> None:
         """Limit the cpu time for this process.
 
         The process will be killed with -signal.SIGXCPU status
@@ -53,11 +53,12 @@ class LimiterLinux(Limiter):
         cpu_time : int
             The amount of time in seconds
 
-        interval: int = 1
-            How often the itimer should ping the process once the time
-            has elapsed.
+        interval: int = 5
+            The time between the initial SIGXCPU sent before a SIGKILL will be
+            sent if the process is still running. This SIGXCPU is sent every
+            second during this interval. See documentation linked in module
         """
-        limit = (cpu_time, cpu_time + 2)
+        limit = (cpu_time, cpu_time + interval)
         resource.setrlimit(resource.RLIMIT_CPU, limit)
 
     def _debug_memory(self) -> str:
