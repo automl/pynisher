@@ -1,14 +1,10 @@
 import platform
-import sys
 from contextlib import redirect_stderr
 from pathlib import Path
 
 from pynisher import Pynisher, contexts, supports
 
 import pytest
-
-plat = sys.platform
-
 
 # We skip the test for mac because it raises a RuntimeError before the warnings are
 # recognized.
@@ -28,10 +24,10 @@ def f() -> int:
     return 1
 
 
-@pytest.mark.parametrize("warnings", [True, False])
+@pytest.mark.parametrize("raise_warnings", [True, False])
 def test_prints_to_std_err_with_warnings_true(
     tmp_path: Path,
-    warnings: bool,
+    raise_warnings: bool,
 ) -> None:
     """
     Expects
@@ -48,13 +44,14 @@ def test_prints_to_std_err_with_warnings_true(
     with path.open("w") as fn, redirect_stderr(fn):
         rf = Pynisher(
             f,
-            warnings=warnings,
+            warnings=raise_warnings,
             memory=(1, "KB"),
-            raises=True,
+            raises=False,
+            context="fork",  # Only seems to work with fork context
         )
         rf()
 
     with path.open("r") as fn:
         result = fn.readlines()
 
-    assert any(result) == warnings
+    assert any(result) == raise_warnings
