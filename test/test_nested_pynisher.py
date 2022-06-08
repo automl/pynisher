@@ -78,7 +78,7 @@ def pynish_cputime(context: str) -> float:
 def test_two_level_fail_second_level(
     top_limit: dict,
     func: Callable,
-    err: Type[Exception],
+    err_type: Type[Exception],
     root_context: str,
     sub_context: str,
 ) -> None:
@@ -90,6 +90,7 @@ def test_two_level_fail_second_level(
     Expects
     -------
     * The underlying error from pynisher level 2 should be propogated up
+    * All of the processes children should be terminated
     """
     if root_context == "fork" and sub_context == "forkserver":
         pytest.skip(
@@ -103,17 +104,19 @@ def test_two_level_fail_second_level(
             " to create new subprocesses with 'spawn'"
         )
 
+    if err_type is MemoryLimitException and not supports("memory"):
+        pytest.skip(f"System {sys.platform} does not support 'memory' limiting")
+
+    # The function being limitied will raise one of the specific errors
+    # as seen in `parametrize` above
     lf = limit(func, **top_limit, context=root_context)
 
     try:
         lf(context=sub_context)
-    except err:
+    except err_type:
+        # We should catch the expected error type as it propgates up, in which
+        # case everything is working as intended and we move on
         pass
-    except Exception as e:
-        # Quick hack s.t. the mac tests don't fail
-        if supports("memory"):
-            print(e, type(e))
-            raise e
 
     assert lf._process is not None
 
