@@ -31,7 +31,7 @@ PRECOMMIT ?= pre-commit
 FLAKE8 ?= flake8
 
 DIR := "${CURDIR}"
-DIST := "${CURDIR}/dist""
+DIST := "${CURDIR}/dist"
 INDEX_HTML := "file://${DOCDIR}/build/html/index.html"
 
 install-dev:
