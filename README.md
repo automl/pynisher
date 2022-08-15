@@ -127,7 +127,7 @@ function. The methods for limiting specific resources can be found within the re
 `pynisher/limiters/<platform>.py`.
 
 #### Features
-To check what if a feature is supported on your system:
+To check if a feature is supported on your system:
 ```python
 from pynisher import limit
 
@@ -246,7 +246,7 @@ forceful_keyboard_interrupt: bool = True
 
 #### Exceptions
 Pynisher will let all subprocess `Exceptions` buble up to the controlling process.
-If a subprocess exceeds a limit one of `CpuTimeoutException`, `WallTimeoutException` or `MemoryLimitException` are raised, but you can use their base classes to cover them more generally.
+If a subprocess exceeds a limit, one of `CpuTimeoutException`, `WallTimeoutException` or `MemoryLimitException` are raised, but you can use their base classes to cover them more generally.
 
 ```python
 class PynisherException(Exception): ...
@@ -308,7 +308,7 @@ check for output `output = f(...)`. This will be `None` if an error was raised a
 Pynisher no longer times your function for you with `self.wall_clock_time`. If you need to measure
 the duration it ran, please do so outside of `Pynisher`.
 
-The exceptions were also changed, please see [Exceptions][#Exceptions]
+The exceptions were also changed, please see [Exceptions](#Exceptions)
 
 ## Controlling namespace pollution
 As an advanced use case, sometimes you might want to keep the modules imported for your
@@ -329,7 +329,7 @@ def import_sklearn() -> None:
     raise NotFittedError(SVR())
 
 
-if __name__ == "__main__"
+if __name__ == "__main__":
     # Wrapping all errors
     lf = limit(import_sklearn, wrap_errors=True)
     try:
