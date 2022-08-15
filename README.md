@@ -2,10 +2,6 @@ Pynisher is a library to limit resources of a function call in a synchronous man
 You can use this to ensure that your function doesn't use up more resources than it
 should.
 
-#### NOTE
-While technically, it should work on Mac, we experienced test failures and it will be dealt
-with in a follow up PR.
-
 ## Usage
 
 Limit the time a process can take
