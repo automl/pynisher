@@ -4,6 +4,7 @@ from typing import Any, Callable
 
 import os
 import signal
+from functools import partial
 
 import psutil
 from psutil import Process
@@ -95,7 +96,14 @@ def callstring(f: Callable, *args: Any, **kwargs: Any) -> str:
     """
     parts = list(map(str, args)) + [f"{k}={v}" for k, v in kwargs.items()]
     param_str = ", ".join(parts)
-    return f"{f.__name__}({param_str})"
+    if isinstance(f, partial):
+        name = f.func.__name__
+    elif hasattr(f, "__class__"):
+        name = f.__class__.__name__
+    else:
+        name = f.__qualname__
+
+    return f"{name}({param_str})"
 
 
 def terminate_process(
