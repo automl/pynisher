@@ -98,10 +98,12 @@ def callstring(f: Callable, *args: Any, **kwargs: Any) -> str:
     param_str = ", ".join(parts)
     if isinstance(f, partial):
         name = f.func.__name__
+    elif hasattr(f, "__qualname__"):
+        name = f.__qualname__
     elif hasattr(f, "__class__"):
         name = f.__class__.__name__
     else:
-        name = f.__qualname__
+        name = str(f)
 
     return f"{name}({param_str})"
 
