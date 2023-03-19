@@ -9,7 +9,7 @@ with readme.open("r") as fh:
 
 setup(
     name="pynisher",
-    version="1.0.2",
+    version="1.0.3",
     packages=find_packages(where=".", include=["pynisher*"], exclude=["test*"]),
     include_package_data=True,
     install_requires=[

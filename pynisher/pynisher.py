@@ -40,6 +40,12 @@ Self = TypeVar("Self")
 class Pynisher(Generic[P, T]):
     """Restrict a function's resources"""
 
+    WallTimeoutException = WallTimeoutException
+    CpuTimeoutException = CpuTimeoutException
+    MemoryLimitException = MemoryLimitException
+    PynisherException = PynisherException
+    TimeoutException = WallTimeoutException
+
     # If `raises=True` or left as default, the return type when calling is just T
     @overload
     def __init__(
