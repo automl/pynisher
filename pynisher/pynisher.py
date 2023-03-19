@@ -44,7 +44,7 @@ class Pynisher(Generic[P, T]):
     CpuTimeoutException = CpuTimeoutException
     MemoryLimitException = MemoryLimitException
     PynisherException = PynisherException
-    TimeoutException = WallTimeoutException
+    TimeoutException = TimeoutException
 
     # If `raises=True` or left as default, the return type when calling is just T
     @overload
