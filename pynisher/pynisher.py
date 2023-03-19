@@ -13,6 +13,7 @@ from typing_extensions import Literal, ParamSpec
 from pynisher.exceptions import (
     CpuTimeoutException,
     MemoryLimitException,
+    TimeoutException,
     PynisherException,
     WallTimeoutException,
 )
