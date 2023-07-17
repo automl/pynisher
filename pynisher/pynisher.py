@@ -13,8 +13,8 @@ from typing_extensions import Literal, ParamSpec
 from pynisher.exceptions import (
     CpuTimeoutException,
     MemoryLimitException,
-    TimeoutException,
     PynisherException,
+    TimeoutException,
     WallTimeoutException,
 )
 from pynisher.limiters import Limiter
@@ -239,7 +239,7 @@ class Pynisher(Generic[P, T]):
         if _memory is not None and not _memory >= 1:
             raise ValueError(f"`memory` {memory} must be >= 1 Byte")
 
-        if context is not None and context not in valid_contexts:
+        if isinstance(context, str) and context not in valid_contexts:
             raise ValueError(f"`context` {context} must be in {valid_contexts}")
 
         if isinstance(wrap_errors, dict):
@@ -257,7 +257,11 @@ class Pynisher(Generic[P, T]):
         self.memory = _memory
         self.wall_time = _wall_time
         self.raises = raises
-        self.context = multiprocessing.get_context(context)
+        self.context = (
+            multiprocessing.get_context(context)
+            if isinstance(context, str) or context is None
+            else context
+        )
         self.warnings = warnings
         self.wrap_errors = wrap_errors
         self.terminate_child_processes = terminate_child_processes
@@ -338,7 +342,7 @@ class Pynisher(Generic[P, T]):
 
         # We now create the subprocess and let it know that it should call the limiter's
         # __call__ with the args and kwargs for the function being limited
-        subprocess = self.context.Process(
+        subprocess = self.context.Process(  # type: ignore
             target=limiter.__call__,
             args=args,  # type: ignore
             kwargs=kwargs,  # type: ignore
@@ -436,7 +440,6 @@ class Pynisher(Generic[P, T]):
 
         # We got a result or an error
         if result is not EMPTY or err is not None:
-
             # If an error, the result must be empty
             if err is not None:
                 result = EMPTY
