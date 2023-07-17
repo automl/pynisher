@@ -1,4 +1,5 @@
-"""
+"""Set limits for Linux.
+
 For documentation on `setrlimit` and how to limit resources for Linux
 ** `setrlimit` **
 https://man7.org/linux/man-pages/man2/setrlimit.2.html
@@ -19,7 +20,7 @@ from pynisher.limiters.limiter import Limiter
 
 class LimiterLinux(Limiter):
     def limit_memory(self, memory: int) -> None:
-        """Limit the addressable memory
+        """Limit the addressable memory.
 
         This could technically raise `SIGSEGV` (segmentation fault) but
         we instead catch a python `MemoryError` as indication that memory

@@ -39,7 +39,6 @@ class LimiterWindows(Limiter):
             we just have the one process
         """
         if not hasattr(self, "_job"):
-
             # First try to import stuff, an easy exception to catch and give good
             # information about
             try:

@@ -105,7 +105,6 @@ class Limiter(ABC):
         None
         """
         try:
-
             if self.cpu_time is not None:
                 self.limit_cpu_time(self.cpu_time)
 
@@ -253,7 +252,6 @@ class Limiter(ABC):
             print(msg, file=sys.stderr)
 
     def _wrap_error(self, err: Exception, *args: Any, **kwargs: Any) -> Exception:
-
         _wrap_message = f"Wrapped Exception {type(err).__name__} - {err}"
 
         # Catch memory errors first, these don't count as `wrap_errors=False`
@@ -299,9 +297,7 @@ class Limiter(ABC):
                 return WallTimeoutException(_wrap_message)
 
         if self.memory is not None and "memory" in mapping:
-
             for t in mapping["memory"]:
-
                 # Windows specific errors
                 if isinstance(t, tuple) and len(t) == 3:
                     errT, errno, winerr = t

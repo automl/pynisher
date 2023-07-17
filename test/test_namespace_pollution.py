@@ -27,7 +27,6 @@ def test_not_in_namespace(context: str, wrap_errors: Any) -> None:
       the error should leak no namespaces into the master process
     """
     with limit(import_sklearn, context=context, wrap_errors=wrap_errors) as lf:
-
         try:
             lf()
         except PynisherException:

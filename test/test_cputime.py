@@ -35,6 +35,5 @@ def test_fail(context: str) -> None:
       exceeding the time limit
     """
     with pytest.raises(CpuTimeoutException):
-
         with Pynisher(busy_wait, cpu_time=2, context=context) as rf:
             rf(20)

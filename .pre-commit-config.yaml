@@ -9,12 +9,12 @@ repos:
       - id: isort
         name: isort imports pynisher
         files: pynisher/.*
-        args: [--check]
+        args: [--check, --profile=black, config=pyproject.toml]
 
       - id: isort
         name: isort imports test
         files: test/.*
-        args: [--check]
+        args: [--check, --profile=black, config=pyproject.toml]
 
   - repo: https://github.com/psf/black
     rev: 23.7.0
@@ -22,19 +22,20 @@ repos:
       - id: black
         name: black formatter pynisher
         files: pynisher/.*
-        args: [--check]
+        args: [--check, --config, pyproject.toml]
 
       - id: black
         name: black formatter test
         files: test/.*
-        args: [--check]
+        args: [--check, --config, pyproject.toml]
 
   - repo: https://github.com/pycqa/pydocstyle
     rev: 6.3.0
     hooks:
       - id: pydocstyle
         files: pynisher/.*
-        additional_dependencies: ["toml"]
+        additional_dependencies: ["tomli"]
+        args: [--config, pyproject.toml]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.4.1
@@ -42,6 +43,7 @@ repos:
       - id: mypy
         name: mypy pynisher
         files: pynisher/.*
+        args: [--config-file, pyproject.toml]
 
   - repo: https://github.com/pycqa/flake8
     rev: 6.0.0
