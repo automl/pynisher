@@ -1,4 +1,5 @@
 from __future__ import annotations
+from multiprocessing.context import BaseContext
 
 from typing import Any, Callable, Generic, Type, TypeVar, overload
 
@@ -58,7 +59,7 @@ class Pynisher(Generic[P, T]):
         memory: int | tuple[int, str] | None = ...,
         cpu_time: int | tuple[float, str] | None = ...,
         wall_time: int | tuple[float, str] | None = ...,
-        context: str | None = ...,
+        context: str | BaseContext | None = ...,
         warnings: bool = ...,
         wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
         terminate_child_processes: bool = ...,
@@ -78,7 +79,7 @@ class Pynisher(Generic[P, T]):
         memory: int | tuple[int, str] | None = ...,
         cpu_time: int | tuple[float, str] | None = ...,
         wall_time: int | tuple[float, str] | None = ...,
-        context: str | None = ...,
+        context: str | BaseContext | None = ...,
         warnings: bool = ...,
         wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
         terminate_child_processes: bool = ...,
@@ -94,7 +95,7 @@ class Pynisher(Generic[P, T]):
         memory: int | tuple[int, str] | None = None,
         cpu_time: int | tuple[float, str] | None = None,
         wall_time: int | tuple[float, str] | None = None,
-        context: str | None = None,
+        context: str | BaseContext | None = None,
         raises: bool = True,
         warnings: bool = True,
         wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
@@ -131,7 +132,7 @@ class Pynisher(Generic[P, T]):
             Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
             Units available are "s", "m", "h"
 
-        context : "fork" | "forkserver" | "spawn" | None = None
+        context : "fork" | "forkserver" | "spawn"  | BaseContext | None = None
             The context to use with multiprocessing.get_context()
             * https://docs.python.org/3/library/multiprocessing.html#multiprocessing.get_context
 
@@ -574,7 +575,7 @@ def restricted(
     memory: int | tuple[int, str] | None = ...,
     cpu_time: int | None = ...,
     wall_time: int | None = ...,
-    context: str | None = ...,
+    context: str | BaseContext | None = ...,
     warnings: bool = ...,
     wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
     terminate_child_processes: bool = ...,
@@ -591,7 +592,7 @@ def restricted(
     memory: int | tuple[int, str] | None = ...,
     cpu_time: int | None = ...,
     wall_time: int | None = ...,
-    context: str | None = ...,
+    context: str | BaseContext | None = ...,
     warnings: bool = ...,
     wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = ...,
     terminate_child_processes: bool = ...,
@@ -623,7 +624,7 @@ def restricted(
     memory: int | tuple[int, str] | None = None,
     cpu_time: int | None = None,
     wall_time: int | None = None,
-    context: str | None = None,
+    context: str | BaseContext | None = None,
     raises: bool = True,
     warnings: bool = True,
     wrap_errors: bool | list[str | Type[Exception]] | dict[str, Any] = False,
@@ -672,7 +673,7 @@ def restricted(
         Can provide in (time, units) such as (1.5, "h") to indicate one and a half hours.
         Units available are "s", "m", "h"
 
-    context : "fork" | "forkserver" | "spawn" | None = None
+    context : "fork" | "forkserver" | "spawn" | BaseContext | None = None
         The context to use with multiprocessing.get_context()
         * https://docs.python.org/3/library/multiprocessing.html#multiprocessing.get_context
 

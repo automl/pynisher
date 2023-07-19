@@ -210,7 +210,7 @@ raises: bool = True
 
 # This is the multiprocess context used, please refer to their documentation
 # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
-context: "fork" | "spawn" | "forkserver" | None = None
+context: "fork" | "spawn" | "forkserver" | BaseContext | None = None
 
 
 # Whether to emit warnings from  limit or not. The current warnings:
