@@ -77,7 +77,11 @@ class LimiterMac(Limiter):
 
             resource.setrlimit(resource.RLIMIT_AS, new_limits)
         except Exception:
-            raise RuntimeError("Limiting memory is not supported on your platform.")
+            import sys
+
+            raise RuntimeError(
+                f"Limiting memory is not supported on your {sys.platform}"
+            )
 
     def limit_cpu_time(self, cpu_time: int, interval: int = 5) -> None:
         """Limit the cpu time for this process.
