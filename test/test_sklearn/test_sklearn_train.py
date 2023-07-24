@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import faulthandler
-import os
 import platform
 import time
 
@@ -34,9 +32,7 @@ def train_svr(model: Any, X: np.ndarray, y: np.ndarray, limit: Any) -> bool:
     print("Limit ", limit)
 
     # This will cause a coredump with sigdev
-    with open(os.devnull, "rb") as f:
-        faulthandler.enable(file=f)
-        model.fit(X, y)
+    model.fit(X, y)
     print("Memory after fit", m.memory("mb"))
 
     return True
@@ -66,8 +62,8 @@ def test_train_svr_memory(context: str) -> None:
     X, y = make_regression(n_samples=30_000, n_features=128)
 
     # Seem fit will consume about 28mb extra, see __main__
-    # Add 1MB
-    too_little_mem = round(m.memory("MB") + 1)
+    # Add 10MB
+    too_little_mem = round(m.memory("MB") + 10)
 
     lf = limit(train_svr, memory=(too_little_mem, "MB"))
 

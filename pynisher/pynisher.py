@@ -1,12 +1,14 @@
 from __future__ import annotations
-from multiprocessing.context import BaseContext
+from os import read
 
 from typing import Any, Callable, Generic, Type, TypeVar, overload
 
 import multiprocessing
 import signal
 import sys
+import time
 from functools import wraps
+from multiprocessing.context import BaseContext
 
 import psutil
 from typing_extensions import Literal, ParamSpec
@@ -361,18 +363,80 @@ class Pynisher(Generic[P, T]):
             # Likely only to occur when subprocess already finished
             pass
 
+        # 4 kinds of `response` we expect
+        #
+        # * (result, None, None)    | success
+        #                               => No error, we got a result
+        # * (None, error, traceback)| failed
+        #                               =>  Error, CPUtimeout linux/mac, MemoryError
+        # * None                    | failed
+        #                               => MemoryError during sending of real error
+        # * EMPTY                   | failed, nothing received from pipe
+        #                               => Walltime, CPUTimeout windows, Unknown
+        result: _EMPTY | T = EMPTY
+        err: Exception | None = None
+        tb: str | None = None
+
+        # Retrieve a result if we can. We have to manually loop this because if the
+        # subprocess abruptly crashes in such a way that the pipe never closes, we will
+        # hang forever
+        start = time.time()
+        interval = 0.01
+        try:
+            while True:
+                if (
+                    self.wall_time is not None
+                    and (time.time() - start) > self.wall_time
+                ):
+                    result = EMPTY
+                    tb = None
+                    err = WallTimeoutException(
+                        f"Your function took longer than {self.wall_time} seconds to"
+                        f" run.\n{callstring(self.func, *args, **kwargs)}",
+                    )
+                    break
+                elif receive_pipe.poll(interval):
+                    response = receive_pipe.recv()
+                    if response is not None:
+                        result, err, tb = response
+                    else:
+                        result = EMPTY
+                        tb = None
+                        err = MemoryLimitException(
+                            "While returning the result from your function,"
+                            " we could not retrieve the result or any error"
+                            " about why."
+                            f"\n{callstring(self.func, *args, **kwargs)}",
+                        )
+                    break
+                elif not subprocess.is_alive():
+                    result = EMPTY
+                    tb = None
+                    err = None
+                    break
+
+        # Otherwise, there was nothing to read
+        except EOFError:
+            result = EMPTY
+            tb = None
+            err = MemoryLimitException(
+                "There but could not a send response back."
+                " This is likely a MemoryError."
+                f"\n{callstring(self.func, *args, **kwargs)}"
+            )
+
         # If self.wall time is None, block until the subprocess finishes or
         # terminates. Otherwise, will return after wall_time and the process
         # will still be running
         if not self.forceful_keyboard_interrupt:
-            subprocess.join(self.wall_time)
+            subprocess.join(timeout=0.1)
         else:
             # The keyboard interrupt will be send to all processes simultaneuously
             # and handled by each of them. The default behaviour is to terminate
             # but this can be caught by a subprocess and ignored. To circumvent
             # this, we convert this keyboard interrupt into a SIGTERM and propgate it
             try:
-                subprocess.join(self.wall_time)
+                subprocess.join(timeout=0.1)
             except KeyboardInterrupt:
                 terminate_process(
                     subprocess.pid,
@@ -394,46 +458,6 @@ class Pynisher(Generic[P, T]):
             children=self.terminate_child_processes,
             parent=True,
         )
-
-        # 4 kinds of `response` we expect
-        #
-        # * (result, None, None)    | success
-        #                               => No error, we got a result
-        # * (None, error, traceback)| failed
-        #                               =>  Error, CPUtimeout linux/mac, MemoryError
-        # * None                    | failed
-        #                               => MemoryError during sending of real error
-        # * EMPTY                   | failed, nothing received from pipe
-        #                               => Walltime, CPUTimeout windows, Unknown
-        result: _EMPTY | T = EMPTY
-        err: Exception | None = None
-        tb: str | None = None
-
-        # Retrieve a result if we can,
-        if receive_pipe.poll() and not receive_pipe.closed:
-            try:
-                response = receive_pipe.recv()
-                if response is not None:
-                    result, err, tb = response
-                else:
-                    result = EMPTY
-                    tb = None
-                    err = MemoryLimitException(
-                        "While returning the result from your function,"
-                        " we could not retrieve the result or any error"
-                        " about why."
-                        f"\n{callstring(self.func, *args, **kwargs)}",
-                    )
-
-            # Otherwise, there was nothing to read
-            except EOFError:
-                result = EMPTY
-                tb = None
-                err = MemoryLimitException(
-                    "There but could not a send response back."
-                    " This is likely a MemoryError."
-                    f"\n{callstring(self.func, *args, **kwargs)}"
-                )
 
         # Cleanup pipes
         receive_pipe.close()

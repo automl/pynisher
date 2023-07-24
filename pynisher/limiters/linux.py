@@ -13,9 +13,29 @@ incase of specific modules or changes needed.
 """
 from __future__ import annotations
 
+from typing import Any
+
 import resource
+from pynisher.exceptions import CpuTimeoutException
 
 from pynisher.limiters.limiter import Limiter
+
+
+def raise_on_cpu_limit(signum: Any, frame: Any) -> None:
+    """Raise a `RuntimeError` when the CPU limit is reached.
+
+    This is a signal handler for `SIGXCPU` which is sent when the CPU time limit
+    is reached. This is a signal that is sent to the process, not the thread, so
+    we need to make sure that we only raise the exception in the main thread.
+
+    Parameters
+    ----------
+    signum : int
+        The signal number
+    frame : FrameType
+        The current stack frame
+    """
+    raise CpuTimeoutException("CPU time limit exceeded")
 
 
 class LimiterLinux(Limiter):
