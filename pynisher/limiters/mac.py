@@ -29,7 +29,6 @@ from __future__ import annotations
 from typing import Any
 
 import resource
-from signal import signal
 
 from pynisher.exceptions import CpuTimeoutException
 from pynisher.limiters.limiter import Limiter
@@ -104,4 +103,3 @@ class LimiterMac(Limiter):
         """
         limit = (cpu_time, cpu_time + interval)
         resource.setrlimit(resource.RLIMIT_CPU, limit)
-        signal.signal(signal.SIGXCPU, raise_on_cpu_limit)

@@ -6,13 +6,10 @@ from typing import Any, Callable, Type
 
 import os
 import platform
-import faulthandler
 import signal
 import sys
-import signal
 import traceback
 from multiprocessing.connection import Connection
-
 
 from pynisher.exceptions import (
     CpuTimeoutException,
@@ -22,11 +19,6 @@ from pynisher.exceptions import (
 )
 from pynisher.util import Monitor, callstring, terminate_process
 from pynisher.win_errcodes import WIN_ERROR_COMMITMENT_LIMIT
-
-
-def kill_on_sigsegv(signum: int, frame: Any) -> None:
-    # Most likely a memory error
-    raise MemoryLimitException("Memory limit exceeded")
 
 
 def is_err(err: Exception, err_type: str | Type[Exception]) -> bool:
@@ -41,7 +33,6 @@ def is_err(err: Exception, err_type: str | Type[Exception]) -> bool:
     b = isinstance(err_type, type) and type(err) == err_type
 
     return a or b
-
 
 
 class Limiter(ABC):
