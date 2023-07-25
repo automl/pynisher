@@ -567,6 +567,13 @@ class Pynisher(Generic[P, T]):
         if not self.raises:
             return EMPTY
 
+        if (
+            isinstance(err, MemoryError)
+            and self.memory is not None
+            and not isinstance(err, MemoryLimitException)
+        ):
+            err = MemoryLimitException(f"MemoryError raised with limit {self.memory}B")
+
         if tb is not None:
             # Just so we can insert the traceback
             raise err from err.__class__(tb)
