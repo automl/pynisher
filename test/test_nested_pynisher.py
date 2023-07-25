@@ -59,11 +59,9 @@ def pynish_cputime(context: str) -> float:
     return 13.37
 
 
-@pytest.mark.parametrize(
-    # Gracious limits
-    "top_limit",
-    [{"wall_time": 20, "cpu_time": 20, "memory": (500, "MB")}],
-)
+@pytest.mark.parametrize("memory_limit", [(500, "MB"), None])
+@pytest.mark.parametrize("wall_time_limit", [(20, "s"), None])
+@pytest.mark.parametrize("cpu_time_limit", [(20, "s"), None])
 @pytest.mark.parametrize(
     "func, err_type",
     [
@@ -76,7 +74,9 @@ def pynish_cputime(context: str) -> float:
 @pytest.mark.parametrize("root_context", contexts)
 @pytest.mark.parametrize("sub_context", contexts)
 def test_two_level_fail_second_level(
-    top_limit: dict,
+    memory_limit: tuple | None,
+    wall_time_limit: tuple | None,
+    cpu_time_limit: tuple | None,
     func: Callable,
     err_type: Type[Exception],
     root_context: str,
@@ -104,19 +104,36 @@ def test_two_level_fail_second_level(
             " to create new subprocesses with 'spawn'"
         )
 
-    if err_type is MemoryLimitException and not supports("memory"):
+    if (memory_limit is not None or err_type is MemoryLimitException) and not supports(
+        "memory"
+    ):
         pytest.skip(f"System {sys.platform} does not support 'memory' limiting")
+
+    if (cpu_time_limit is not None or err_type is CpuTimeoutException) and not supports(
+        "cpu_time"
+    ):
+        pytest.skip(f"System {sys.platform} does not support 'cpu_time' limiting")
+
+    if (
+        wall_time_limit is not None or err_type is WallTimeoutException
+    ) and not supports("wall_time"):
+        pytest.skip(f"System {sys.platform} does not support 'wall_time' limiting")
 
     # The function being limitied will raise one of the specific errors
     # as seen in `parametrize` above
+    top_limit = {
+        "memory": memory_limit,
+        "wall_time": wall_time_limit,
+        "cpu_time": cpu_time_limit,
+    }
     lf = limit(func, **top_limit, context=root_context)
 
     try:
         lf(context=sub_context)
-    except err_type:
+    except BaseException as e:
         # We should catch the expected error type as it propgates up, in which
         # case everything is working as intended and we move on
-        pass
+        assert isinstance(e, err_type)
 
     assert lf._process is not None
 
