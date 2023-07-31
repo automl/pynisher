@@ -6,6 +6,7 @@ import multiprocessing
 import signal
 import sys
 import time
+import warnings
 from functools import wraps
 from multiprocessing.context import BaseContext
 
@@ -351,6 +352,25 @@ class Pynisher(Generic[P, T]):
             daemon=False,
             name=self.name,
         )
+
+        # Make sure that if this process is killed, make any connections are closed
+        # and the subprocess is killed
+        _default_sigint_handler: signal._HANDLER = signal.getsignal(signal.SIGINT)
+        if _default_sigint_handler is signal.Handlers.SIG_IGN:
+            warnings.warn(
+                f"SIGINT is ignored by this process for this function {self.func}, "
+                " ignoring this as the output connection must be closed "
+            )
+
+        def _sigint_handler(sig: int, frame: Any) -> None:
+            # Close the receive pipe to signal to the subprocess that we are done
+            receive_pipe.close()
+
+            # Let the default handler run
+            if callable(_default_sigint_handler):
+                _default_sigint_handler(sig, frame)
+
+        signal.signal(signal.SIGINT, _sigint_handler)
 
         # Let loose
         subprocess.start()
