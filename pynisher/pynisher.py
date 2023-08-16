@@ -446,32 +446,67 @@ class Pynisher(Generic[P, T]):
                 " This is likely a MemoryError."
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
-        finally:
-            # Close the receive pipe
-            receive_pipe.close()
-            if subprocess.is_alive():
-                subprocess.terminate()
-            subprocess.join(0.1)
-
-        # If self.wall time is None, block until the subprocess finishes or
-        # terminates. Otherwise, will return after wall_time and the process
-        # will still be running
-        if not self.forceful_keyboard_interrupt:
-            subprocess.join(timeout=0.1)
-        else:
+        except KeyboardInterrupt as e:
             # The keyboard interrupt will be send to all processes simultaneuously
             # and handled by each of them. The default behaviour is to terminate
             # but this can be caught by a subprocess and ignored. To circumvent
             # this, we convert this keyboard interrupt into a SIGTERM and propgate it
             try:
-                subprocess.join(timeout=0.1)
-            except KeyboardInterrupt:
+                # We assume this will return if all subprocess have terminated
+                # due to the keyboard interrupt
+                subprocess.join(timeout=1)
+            except TimeoutError:
+                # If not, we will escalate the keyboard interrupt to a SIGTERM
+                # and give the subprocesses a chance to terminate
+                if self.forceful_keyboard_interrupt:
+                    terminate_process(
+                        subprocess.pid,
+                        children=self.terminate_child_processes,
+                        parent=True,
+                    )
+                    subprocess.join(timeout=1)
+            finally:
+                # We now ensure all subprocesses are sent a SIGTERM if still existing
                 terminate_process(
                     subprocess.pid,
                     children=self.terminate_child_processes,
                     parent=True,
                 )
-                raise KeyboardInterrupt
+
+                # If the subprocesses are still alive, we will send a SIGKILL
+                try:
+                    subprocess.join(0.1)
+                except TimeoutError:
+                    terminate_process(
+                        subprocess.pid,
+                        children=self.terminate_child_processes,
+                        parent=True,
+                        sig=signal.SIGKILL,
+                    )
+                finally:
+                    # At this point, we have tried to terminate the subprocesses
+                    # as gracefully as possible. We now wait for them to terminate
+                    # and close the pipes
+                    try:
+                        subprocess.join(1)
+                    except TimeoutError:
+                        pass
+
+                    receive_pipe.close()
+                    send_pipe.close()
+
+            raise KeyboardInterrupt from e
+        finally:
+            # Close the pipes
+            receive_pipe.close()
+            send_pipe.close()
+
+            # Tell the subprocess to terminate with SIGTERM
+            terminate_process(
+                subprocess.pid,
+                children=self.terminate_child_processes,
+                parent=True,
+            )
 
         # exitcode here can only take on 3 values
         #
@@ -480,16 +515,6 @@ class Pynisher(Generic[P, T]):
         # * != 0        | Process was terminated non-gracefully, nothing in the pipe
         #               | and it may not be closed
         exitcode = subprocess.exitcode
-
-        terminate_process(
-            subprocess.pid,
-            children=self.terminate_child_processes,
-            parent=True,
-        )
-
-        # Cleanup pipes
-        receive_pipe.close()
-        send_pipe.close()
 
         # We got a result or an error
         if result is not EMPTY or err is not None:
@@ -779,7 +804,10 @@ def restricted(
                 cpu_time=cpu_time,
                 wall_time=wall_time,
                 raises=raises,
-                wrap_errors=wrap_errors,
+                warnings=True,
+                wrap_errors=False,
+                terminate_child_processes=True,
+                forceful_keyboard_interrupt=True,
             )
             return pynisher(*args, **kwargs)
 
