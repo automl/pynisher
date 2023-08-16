@@ -355,13 +355,6 @@ class Pynisher(Generic[P, T]):
 
         # Make sure that if this process is killed, make any connections are closed
         # and the subprocess is killed
-        _default_sigint_handler: signal._HANDLER = signal.getsignal(signal.SIGINT)
-        if _default_sigint_handler is signal.Handlers.SIG_IGN:
-            warnings.warn(
-                f"SIGINT is ignored by this process for this function {self.func}, "
-                " ignoring this as the output connection must be closed "
-            )
-
         _default_sigterm_handler: signal._HANDLER = signal.getsignal(signal.SIGTERM)
         if _default_sigterm_handler is signal.Handlers.SIG_IGN:
             warnings.warn(
@@ -377,12 +370,9 @@ class Pynisher(Generic[P, T]):
             subprocess.join(0.1)
 
             # Let the default handler run
-            if sig is signal.SIGINT and callable(_default_sigint_handler):
-                _default_sigint_handler(sig, frame)
-            elif sig is signal.SIGTERM and callable(_default_sigterm_handler):
+            if sig is signal.SIGTERM and callable(_default_sigterm_handler):
                 _default_sigterm_handler(sig, frame)
 
-        signal.signal(signal.SIGINT, _closing_handler)
         signal.signal(signal.SIGTERM, _closing_handler)
 
         # Let loose
