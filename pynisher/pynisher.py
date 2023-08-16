@@ -363,8 +363,11 @@ class Pynisher(Generic[P, T]):
             )
 
         def _sigint_handler(sig: int, frame: Any) -> None:
-            # Close the receive pipe to signal to the subprocess that we are done
+            if subprocess.is_alive():
+                subprocess.kill()
+
             receive_pipe.close()
+            subprocess.join(0.1)
 
             # Let the default handler run
             if callable(_default_sigint_handler):
@@ -443,6 +446,12 @@ class Pynisher(Generic[P, T]):
                 " This is likely a MemoryError."
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
+        finally:
+            # Close the receive pipe
+            receive_pipe.close()
+            if subprocess.is_alive():
+                subprocess.terminate()
+            subprocess.join(0.1)
 
         # If self.wall time is None, block until the subprocess finishes or
         # terminates. Otherwise, will return after wall_time and the process

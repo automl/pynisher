@@ -9,6 +9,7 @@ import platform
 import signal
 import sys
 import traceback
+import warnings
 from multiprocessing.connection import Connection
 
 from pynisher.exceptions import (
@@ -104,6 +105,24 @@ class Limiter(ABC):
         -------
         None
         """
+        # Make sure that if this process is killed, make any connections are closed
+        # and the subprocess is killed
+        _default_sigint_handler: signal._HANDLER = signal.getsignal(signal.SIGINT)
+        if _default_sigint_handler is signal.Handlers.SIG_IGN:
+            warnings.warn(
+                f"SIGINT is ignored by this process for this function {self.func}, "
+                " ignoring this as the output connection must be closed "
+            )
+
+        def _sigint_handler(sig: int, frame: Any) -> None:
+            self.output.close()
+
+            # Let the default handler run
+            if callable(_default_sigint_handler):
+                _default_sigint_handler(sig, frame)
+
+        signal.signal(signal.SIGINT, _sigint_handler)
+
         try:
             if self.cpu_time is not None:
                 self.limit_cpu_time(self.cpu_time)
