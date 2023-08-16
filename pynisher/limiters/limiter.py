@@ -114,14 +114,24 @@ class Limiter(ABC):
                 " ignoring this as the output connection must be closed "
             )
 
-        def _sigint_handler(sig: int, frame: Any) -> None:
+        _default_sigterm_handler: signal._HANDLER = signal.getsignal(signal.SIGTERM)
+        if _default_sigterm_handler is signal.Handlers.SIG_IGN:
+            warnings.warn(
+                f"SIGTERM is ignored by this process for this function {self.func}, "
+                " ignoring this as the output connection must be closed "
+            )
+
+        def _closing_handler(sig: int, frame: Any) -> None:
             self.output.close()
 
             # Let the default handler run
-            if callable(_default_sigint_handler):
+            if sig is signal.SIGINT and callable(_default_sigint_handler):
                 _default_sigint_handler(sig, frame)
+            elif sig is signal.SIGTERM and callable(_default_sigterm_handler):
+                _default_sigterm_handler(sig, frame)
 
-        signal.signal(signal.SIGINT, _sigint_handler)
+        signal.signal(signal.SIGINT, _closing_handler)
+        signal.signal(signal.SIGTERM, _closing_handler)
 
         try:
             if self.cpu_time is not None:
