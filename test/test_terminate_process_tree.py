@@ -151,11 +151,18 @@ def test_terminate_child_processes_false_keeps_children(
     assert lf._process is not None and not lf._process.is_running()
 
     for pid in children_pids:
+        child: psutil.Process | None = None
         try:
             child = psutil.Process(pid)
-            assert not child.is_running()
+            assert child.is_running()
+            child.terminate()
+            child.kill()
         except psutil.NoSuchProcess:
             pass
+        finally:
+            if child is not None:
+                child.wait(timeout=1)
+                assert not child.is_running()
 
 
 if __name__ == "__main__":
