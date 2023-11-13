@@ -31,7 +31,7 @@ def is_err(err: Exception, err_type: str | Type[Exception]) -> bool:
     # We do this because many library specific errors may inherit from base errors
     # and we don't want to accidentally wrap to many errors.
     # i.e. sklearn.exceptions.NotFittedError inherits form ValueError
-    b = isinstance(err_type, type) and type(err) == err_type
+    b = isinstance(err_type, type) and err is err_type
 
     return a or b
 

@@ -5,21 +5,16 @@ from typing import Any, Callable, Generic, Type, TypeVar, overload
 import multiprocessing
 import signal
 import sys
+import threading
 import time
 import warnings
 from functools import wraps
 from multiprocessing.context import BaseContext
 
 import psutil
-from typing_extensions import Literal, ParamSpec
+from typing_extensions import Literal, ParamSpec, TypeAlias
 
-from pynisher.exceptions import (
-    CpuTimeoutException,
-    MemoryLimitException,
-    PynisherException,
-    TimeoutException,
-    WallTimeoutException,
-)
+import pynisher.exceptions
 from pynisher.limiters import Limiter
 from pynisher.support import contexts as valid_contexts
 from pynisher.support import supports
@@ -44,11 +39,11 @@ Self = TypeVar("Self")
 class Pynisher(Generic[P, T]):
     """Restrict a function's resources"""
 
-    WallTimeoutException = WallTimeoutException
-    CpuTimeoutException = CpuTimeoutException
-    MemoryLimitException = MemoryLimitException
-    PynisherException = PynisherException
-    TimeoutException = TimeoutException
+    WallTimeoutException: TypeAlias = pynisher.exceptions.WallTimeoutException
+    CpuTimeoutException: TypeAlias = pynisher.exceptions.CpuTimeoutException
+    MemoryLimitException: TypeAlias = pynisher.exceptions.MemoryLimitException
+    PynisherException: TypeAlias = pynisher.exceptions.PynisherException
+    TimeoutException: TypeAlias = pynisher.exceptions.TimeoutException
 
     # If `raises=True` or left as default, the return type when calling is just T
     @overload
@@ -355,25 +350,30 @@ class Pynisher(Generic[P, T]):
 
         # Make sure that if this process is killed, make any connections are closed
         # and the subprocess is killed
-        _default_sigterm_handler: signal._HANDLER = signal.getsignal(signal.SIGTERM)
-        if _default_sigterm_handler is signal.Handlers.SIG_IGN:
-            warnings.warn(
-                f"SIGTERM is ignored by this process for this function {self.func}, "
-                " ignoring this as the output connection must be closed "
-            )
 
-        def _closing_handler(sig: int, frame: Any) -> None:
-            if subprocess.is_alive():
-                subprocess.kill()
+        # However, there is a problem if this is used in tests where we can only set a
+        # signal handler if this currently running thread is the main interpreter thread
+        # Therefore we can only properly set this when `threading.main_thread()`
+        if threading.main_thread() is threading.current_thread():
+            _default_sigterm_handler: signal._HANDLER = signal.getsignal(signal.SIGTERM)
+            if _default_sigterm_handler is signal.Handlers.SIG_IGN:
+                warnings.warn(
+                    f"SIGTERM is ignored by this process for this function {self.func},"
+                    " ignoring this as the output connection must be closed "
+                )
 
-            receive_pipe.close()
-            subprocess.join(0.1)
+            def _closing_handler(sig: int, frame: Any) -> None:
+                if subprocess.is_alive():
+                    subprocess.kill()
 
-            # Let the default handler run
-            if sig is signal.SIGTERM and callable(_default_sigterm_handler):
-                _default_sigterm_handler(sig, frame)
+                receive_pipe.close()
+                subprocess.join(0.1)
 
-        signal.signal(signal.SIGTERM, _closing_handler)
+                # Let the default handler run
+                if sig is signal.SIGTERM and callable(_default_sigterm_handler):
+                    _default_sigterm_handler(sig, frame)
+
+            signal.signal(signal.SIGTERM, _closing_handler)
 
         # Let loose
         subprocess.start()
@@ -412,7 +412,7 @@ class Pynisher(Generic[P, T]):
                 ):
                     result = EMPTY
                     tb = None
-                    err = WallTimeoutException(
+                    err = pynisher.exceptions.WallTimeoutException(
                         f"Your function took longer than {self.wall_time} seconds to"
                         f" run.\n{callstring(self.func, *args, **kwargs)}",
                     )
@@ -424,7 +424,7 @@ class Pynisher(Generic[P, T]):
                     else:
                         result = EMPTY
                         tb = None
-                        err = MemoryLimitException(
+                        err = pynisher.exceptions.MemoryLimitException(
                             "While returning the result from your function,"
                             " we could not retrieve the result or any error"
                             " about why."
@@ -441,7 +441,7 @@ class Pynisher(Generic[P, T]):
         except EOFError:
             result = EMPTY
             tb = None
-            err = MemoryLimitException(
+            err = pynisher.exceptions.MemoryLimitException(
                 "There but could not a send response back."
                 " This is likely a MemoryError."
                 f"\n{callstring(self.func, *args, **kwargs)}"
@@ -526,7 +526,7 @@ class Pynisher(Generic[P, T]):
 
         # Process ended gracefully but no result?
         if exitcode == 0:
-            err = PynisherException(
+            err = pynisher.exceptions.PynisherException(
                 f"Function ended properly but no result was recieved."
                 f" Got exitcode 0 from subprocess that ran:"
                 f"\n{callstring(self.func, *args, **kwargs)}"
@@ -535,7 +535,7 @@ class Pynisher(Generic[P, T]):
 
         # Wall time expired
         if exitcode is None:
-            err = WallTimeoutException(
+            err = pynisher.exceptions.WallTimeoutException(
                 f"Did not finish in time ({self.wall_time}s)"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
@@ -547,7 +547,7 @@ class Pynisher(Generic[P, T]):
             and self.cpu_time is not None
             and exitcode in WIN_CPUTIMEOUT_EXITCODES
         ):
-            err = CpuTimeoutException(
+            err = pynisher.exceptions.CpuTimeoutException(
                 f"Did not finish in cpu time ({self.cpu_time}s)."
                 f" Specific exitcode is {exitcode}"
                 f"\n{callstring(self.func, *args, **kwargs)}"
@@ -563,7 +563,7 @@ class Pynisher(Generic[P, T]):
             # We can't be certain it was caused by a cputimeout but the exist status
             # in this case is non-consisten and I do not know a way to identify the
             # object timed out properly
-            err = MemoryLimitException(
+            err = pynisher.exceptions.MemoryLimitException(
                 f"Not enough memory to run function ({self.memory}B)."
                 f" Specific exitcode is {exitcode}"
                 f"\n{callstring(self.func, *args, **kwargs)}"
@@ -573,7 +573,7 @@ class Pynisher(Generic[P, T]):
         # We got a segmentation fault, if memomory was set, we assume it's a memory
         # related issue
         if exitcode == -signal.SIGSEGV and self.memory is not None:
-            err = MemoryLimitException(
+            err = pynisher.exceptions.MemoryLimitException(
                 "The function exited with a segmentation error (SIGSEGV) and a memory"
                 " limit was set. We presume this is due to the memory limit. This may"
                 " not be the case but is quite likely if your function works without a"
@@ -588,14 +588,14 @@ class Pynisher(Generic[P, T]):
             and hasattr(signal, "SIGXCPU")
             and exitcode == -signal.SIGXCPU
         ):
-            err = CpuTimeoutException(
+            err = pynisher.exceptions.CpuTimeoutException(
                 f"Did not finish in cpu time ({self.cpu_time}s)"
                 f"\n{callstring(self.func, *args, **kwargs)}"
             )
             return self._handle_return(err=err)
 
         # We didn't get a result and the pipe closed in some way we weren't expecting
-        err = PynisherException(
+        err = pynisher.exceptions.PynisherException(
             f"Unknown reason for exitcode {exitcode}, no result or error recieved and "
             f" killed process \n{callstring(self.func, *args, **kwargs)}"
         )
@@ -624,9 +624,11 @@ class Pynisher(Generic[P, T]):
         if (
             isinstance(err, MemoryError)
             and self.memory is not None
-            and not isinstance(err, MemoryLimitException)
+            and not isinstance(err, pynisher.exceptions.MemoryLimitException)
         ):
-            err = MemoryLimitException(f"MemoryError raised with limit {self.memory}B")
+            err = pynisher.exceptions.MemoryLimitException(
+                f"MemoryError raised with limit {self.memory}B"
+            )
 
         if tb is not None:
             # Just so we can insert the traceback
